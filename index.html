@@ -338,6 +338,19 @@ footer {
 .fade-up:nth-child(3) { transition-delay: 0.2s; }
 .fade-up:nth-child(4) { transition-delay: 0.3s; }
 
+/* ── ZALO FLOAT ── */
+.zalo-float {
+  position: fixed; bottom: 24px; right: 24px; z-index: 999;
+  display: flex; align-items: center; gap: 8px;
+  background: #0068ff; color: white; text-decoration: none;
+  padding: 10px 18px 10px 12px; border-radius: 50px;
+  font-size: 13px; font-weight: 600; font-family: 'DM Sans', sans-serif;
+  box-shadow: 0 4px 20px rgba(0,104,255,0.4);
+  transition: all 0.2s; animation: zaloIn 0.5s ease 1s both;
+}
+.zalo-float:hover { transform: translateY(-3px); box-shadow: 0 8px 28px rgba(0,104,255,0.5); }
+@keyframes zaloIn { from { opacity:0; transform:translateY(20px); } to { opacity:1; transform:translateY(0); } }
+
 /* ── RESPONSIVE ── */
 @media (max-width: 900px) {
   .features-grid { grid-template-columns: repeat(2, 1fr); }
@@ -652,9 +665,19 @@ footer {
 <!-- FOOTER -->
 <footer>
   <div class="footer-logo">Task<span>Flow</span></div>
+  <div style="display:flex;gap:16px;align-items:center;">
+    <a href="https://zalo.me/0984697879" style="font-size:12px;color:rgba(255,255,255,0.5);text-decoration:none;">💬 Zalo CSKH: 0984 697 879</a>
+    <span style="color:rgba(255,255,255,0.2);">·</span>
+    <a href="https://t.me/tasktracker01bot" style="font-size:12px;color:rgba(255,255,255,0.5);text-decoration:none;">✈️ Telegram</a>
+  </div>
   <div class="footer-text">© 2026 TaskFlow · taskflow.com.vn</div>
-  <a href="https://app.taskflow.com.vn" style="font-size:12px;color:rgba(255,255,255,0.4);text-decoration:none;">Đăng nhập →</a>
 </footer>
+
+<!-- NÚT ZALO NỔI -->
+<a href="https://zalo.me/0984697879" target="_blank" class="zalo-float" title="Chat Zalo hỗ trợ">
+  <img src="https://page.widget.zalo.me/static/images/2.0/Logo.svg" alt="Zalo" width="28" height="28" onerror="this.outerHTML='💬'">
+  <span>Hỗ trợ</span>
+</a>
 
 <!-- PAYMENT MODAL -->
 <div class="modal-overlay" id="payment-modal" onclick="if(event.target===this)closePayment()">
@@ -723,6 +746,7 @@ footer {
           <div class="pstep-desc" style="margin-bottom:8px;">Gửi ảnh chụp màn hình chuyển khoản + email đăng ký đến:</div>
           <div class="tg-contact-box">
             ✈️ Telegram: <strong><a href="https://t.me/tasktracker01bot" style="color:#1a87b5;text-decoration:none;">@tasktracker01bot</a></strong><br>
+            💬 Zalo: <strong><a href="https://zalo.me/0984697879" style="color:#0068ff;text-decoration:none;">0984 697 879</a></strong><br>
             ⏱ Kích hoạt trong vòng <strong>30 phút</strong>
           </div>
         </div>
