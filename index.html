@@ -697,7 +697,7 @@ footer {
             <div style="flex-shrink:0;text-align:center;">
               <img
                 id="vietqr-img"
-                src="https://img.vietqr.io/image/TCB-305612697879-compact2.png?amount=150000&addInfo=TASKFLOW%20[email]&accountName=MAI%20HOANG%20KHANH%20LINH"
+                src="https://img.vietqr.io/image/ACB-38692527-compact2.png?amount=150000&addInfo=TASKFLOW%20[email]&accountName=MAI%20HOANG%20KHANH%20LINH"
                 alt="QR Thanh toán TaskFlow"
                 style="width:180px;height:180px;border-radius:12px;border:2px solid var(--border);display:block;"
                 onerror="this.style.display='none';document.getElementById('qr-fallback').style.display='block'"
@@ -710,9 +710,9 @@ footer {
             </div>
             <!-- Thông tin TK -->
             <div class="bank-box" style="flex:1;min-width:180px;">
-              <div>Ngân hàng: <strong>Techcombank</strong></div>
-              <div>Số TK: <strong style="font-size:15px;letter-spacing:0.05em;">305612697879</strong>
-                <button onclick="copyText('305612697879', this)" style="background:none;border:1px solid var(--border);border-radius:4px;padding:2px 8px;font-size:10px;cursor:pointer;margin-left:6px;color:var(--text-muted);">Copy</button>
+              <div>Ngân hàng: <strong>ACB</strong></div>
+              <div>Số TK: <strong style="font-size:15px;letter-spacing:0.05em;">38692527</strong>
+                <button onclick="copyText('38692527', this)" style="background:none;border:1px solid var(--border);border-radius:4px;padding:2px 8px;font-size:10px;cursor:pointer;margin-left:6px;color:var(--text-muted);">Copy</button>
               </div>
               <div>Chủ TK: <strong>MAI HOÀNG KHÁNH LINH</strong></div>
               <div>Số tiền: <strong class="bank-amount">150.000đ</strong></div>
@@ -778,8 +778,8 @@ function closePayment() {
 
 // VietQR: cập nhật QR khi user nhập email
 function updateQR(email) {
-  const bankCode = 'TCB';
-  const accountNo = '305612697879';
+  const bankCode = 'ACB';
+  const accountNo = '38692527';
   const amount = '150000';
   const emailClean = email.trim();
   const addInfo = encodeURIComponent('TASKFLOW ' + (emailClean || '[email]'));
