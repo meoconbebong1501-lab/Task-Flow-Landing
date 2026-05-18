@@ -261,7 +261,9 @@ section { padding: 96px 40px; }
 .modal-overlay.open { display: flex; }
 .payment-modal {
   background: white; border-radius: var(--radius-lg); padding: 36px;
-  width: 100%; max-width: 440px; box-shadow: 0 24px 80px rgba(26,46,34,0.2);
+  width: 100%; max-width: 440px;
+  max-height: 90vh; overflow-y: auto;
+  box-shadow: 0 24px 80px rgba(26,46,34,0.2);
   animation: slideUp 0.3s ease;
 }
 @keyframes slideUp { from { opacity:0; transform:translateY(20px); } to { opacity:1; transform:translateY(0); } }
@@ -354,6 +356,8 @@ footer {
   .steps { grid-template-columns: repeat(2, 1fr); }
   .mockup-body { grid-template-columns: 1fr; }
   footer { flex-direction: column; gap: 8px; text-align: center; }
+  .modal-overlay { align-items: flex-end; padding: 0; }
+  .payment-modal { border-radius: 20px 20px 0 0; padding: 24px 20px; max-height: 85vh; }
 }
 </style>
 </head>
