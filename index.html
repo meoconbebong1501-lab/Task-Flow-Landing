@@ -2,829 +2,2192 @@
 <html lang="vi">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<meta name="description" content="TaskFlow — Ứng dụng quản lý công việc thông minh. Kanban board, nhắc deadline tự động qua Telegram. Mua 1 lần dùng mãi mãi.">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="theme-color" content="#1a2e22">
-<title>TaskFlow — Quản lý công việc thông minh</title>
-<link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600;1,9..40,400&display=swap" rel="stylesheet">
+<title>TaskFlow v1.2.0 — Quản lý công việc</title>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
 <style>
-:root {
-  --forest: #1a2e22;
-  --forest-mid: #2d4a38;
-  --moss: #4e8c62;
-  --sage: #8ab89a;
-  --cream: #f7f4ef;
-  --cream-dark: #ede9e2;
-  --amber: #d4843a;
-  --amber-light: #f0a855;
-  --text: #1a2e22;
-  --text-muted: #5a7a66;
-  --border: rgba(26,46,34,0.1);
-  --radius: 12px;
-  --radius-lg: 20px;
-}
-* { box-sizing: border-box; margin: 0; padding: 0; }
-html { scroll-behavior: smooth; }
-body {
-  font-family: 'DM Sans', sans-serif;
-  background: var(--cream);
-  color: var(--text);
-  overflow-x: hidden;
-}
+  :root {
+    --forest: #1a2e22;
+    --forest-mid: #2d4a38;
+    --forest-light: #3d6b4f;
+    --moss: #4e8c62;
+    --sage: #8ab89a;
+    --cream: #f7f4ef;
+    --cream-dark: #ede9e2;
+    --amber: #d4843a;
+    --amber-light: #f0a855;
+    --red: #c0392b;
+    --red-light: #e74c3c;
+    --text: #1a2e22;
+    --text-muted: #5a7a66;
+    --border: rgba(26,46,34,0.12);
+    --border-strong: rgba(26,46,34,0.24);
+    --card-bg: #ffffff;
+    --bg: #f7f4ef;
+    --shadow: 0 2px 12px rgba(26,46,34,0.08);
+    --shadow-lg: 0 8px 32px rgba(26,46,34,0.14);
+    --radius: 10px;
+    --radius-lg: 16px;
+    --col-todo: #fff8f0;
+    --col-inprogress: #f0f6ff;
+    --col-done: #f0faf4;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: 'DM Sans', sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+    font-size: 15px;
+  }
 
-/* ── NAV ── */
-nav {
-  position: fixed; top: 0; left: 0; right: 0; z-index: 100;
-  padding: 16px 40px; display: flex; align-items: center;
-  background: rgba(247,244,239,0.85); backdrop-filter: blur(12px);
-  border-bottom: 1px solid var(--border);
-  transition: all 0.3s;
-}
-.nav-logo { font-family: 'DM Serif Display', serif; font-size: 22px; color: var(--forest); text-decoration: none; }
-.nav-logo span { color: var(--amber); }
-.nav-links { display: flex; gap: 32px; margin-left: 48px; }
-.nav-links a { font-size: 14px; color: var(--text-muted); text-decoration: none; transition: color 0.2s; font-weight: 500; }
-.nav-links a:hover { color: var(--forest); }
-.nav-right { margin-left: auto; display: flex; gap: 12px; align-items: center; }
-.btn-login {
-  padding: 8px 20px; border: 1.5px solid var(--border); border-radius: 8px;
-  font-size: 13px; font-weight: 500; color: var(--text); text-decoration: none;
-  transition: all 0.2s; font-family: 'DM Sans', sans-serif;
-}
-.btn-login:hover { border-color: var(--forest); background: var(--cream-dark); }
-.btn-buy-nav {
-  padding: 8px 20px; background: var(--forest); color: white; border: none;
-  border-radius: 8px; font-size: 13px; font-weight: 500; cursor: pointer;
-  text-decoration: none; font-family: 'DM Sans', sans-serif; transition: background 0.2s;
-}
-.btn-buy-nav:hover { background: var(--forest-mid); }
+  /* ── LOADING SCREEN ── */
+  #loading-screen {
+    position: fixed; inset: 0; background: var(--forest);
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    z-index: 9999; transition: opacity 0.4s ease;
+  }
+  #loading-screen.fade-out { opacity: 0; pointer-events: none; }
+  .loading-logo { font-family: 'DM Serif Display', serif; font-size: 32px; color: white; margin-bottom: 10px; }
+  .loading-logo span { color: var(--amber-light); }
+  .loading-version { font-size: 11px; color: rgba(255,255,255,0.35); letter-spacing: 0.08em; margin-bottom: 36px; }
+  .loading-dots { display: flex; gap: 7px; }
+  .loading-dot {
+    width: 7px; height: 7px; border-radius: 50%; background: rgba(255,255,255,0.3);
+    animation: dotPulse 1.2s ease-in-out infinite;
+  }
+  .loading-dot:nth-child(2) { animation-delay: 0.2s; }
+  .loading-dot:nth-child(3) { animation-delay: 0.4s; }
+  @keyframes dotPulse {
+    0%, 80%, 100% { background: rgba(255,255,255,0.25); transform: scale(1); }
+    40% { background: var(--amber-light); transform: scale(1.3); }
+  }
 
-/* ── HERO ── */
-.hero {
-  min-height: 100vh; display: flex; align-items: center; justify-content: center;
-  padding: 120px 40px 80px; text-align: center; position: relative; overflow: hidden;
-}
-.hero-bg {
-  position: absolute; inset: 0; z-index: 0;
-  background: radial-gradient(ellipse 80% 60% at 50% 0%, rgba(78,140,98,0.12) 0%, transparent 70%),
-              radial-gradient(ellipse 40% 40% at 80% 80%, rgba(212,132,58,0.08) 0%, transparent 60%);
-}
-.hero-dots {
-  position: absolute; inset: 0; z-index: 0;
-  background-image: radial-gradient(circle, rgba(26,46,34,0.06) 1px, transparent 1px);
-  background-size: 32px 32px;
-}
-.hero-content { position: relative; z-index: 1; max-width: 760px; }
-.hero-badge {
-  display: inline-flex; align-items: center; gap: 6px;
-  background: rgba(78,140,98,0.12); color: var(--moss); border: 1px solid rgba(78,140,98,0.2);
-  padding: 6px 14px; border-radius: 20px; font-size: 12px; font-weight: 600;
-  letter-spacing: 0.06em; text-transform: uppercase; margin-bottom: 24px;
-}
-.hero-title {
-  font-family: 'DM Serif Display', serif;
-  font-size: clamp(36px, 6vw, 68px);
-  line-height: 1.12; color: var(--forest); margin-bottom: 20px;
-}
-.hero-title em { color: var(--amber); font-style: italic; }
-.hero-sub {
-  font-size: clamp(15px, 2vw, 18px); color: var(--text-muted);
-  line-height: 1.7; max-width: 520px; margin: 0 auto 36px;
-}
-.hero-cta { display: flex; gap: 14px; justify-content: center; flex-wrap: wrap; }
-.btn-primary-lg {
-  display: inline-flex; align-items: center; gap: 8px;
-  padding: 16px 32px; background: var(--forest); color: white;
-  border-radius: var(--radius); font-size: 15px; font-weight: 600;
-  text-decoration: none; transition: all 0.2s; border: none; cursor: pointer;
-  font-family: 'DM Sans', sans-serif; box-shadow: 0 4px 20px rgba(26,46,34,0.25);
-}
-.btn-primary-lg:hover { background: var(--forest-mid); transform: translateY(-2px); box-shadow: 0 8px 28px rgba(26,46,34,0.3); }
-.btn-secondary-lg {
-  display: inline-flex; align-items: center; gap: 8px;
-  padding: 16px 32px; background: white; color: var(--forest);
-  border-radius: var(--radius); font-size: 15px; font-weight: 500;
-  text-decoration: none; transition: all 0.2s; border: 1.5px solid var(--border);
-  font-family: 'DM Sans', sans-serif;
-}
-.btn-secondary-lg:hover { border-color: var(--forest); transform: translateY(-2px); }
-.hero-note { margin-top: 16px; font-size: 13px; color: var(--text-muted); }
+  /* ── AUTH SCREEN ── */
+  #auth-screen {
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: var(--forest);
+    position: relative;
+    overflow: hidden;
+  }
+  #auth-screen::before {
+    content: '';
+    position: absolute;
+    width: 600px; height: 600px;
+    border-radius: 50%;
+    background: rgba(255,255,255,0.03);
+    top: -200px; right: -150px;
+  }
+  #auth-screen::after {
+    content: '';
+    position: absolute;
+    width: 400px; height: 400px;
+    border-radius: 50%;
+    background: rgba(255,255,255,0.03);
+    bottom: -100px; left: -100px;
+  }
+  .auth-card {
+    background: var(--cream);
+    border-radius: var(--radius-lg);
+    padding: 48px 44px;
+    width: 400px;
+    position: relative;
+    z-index: 1;
+    box-shadow: var(--shadow-lg);
+  }
+  .auth-logo {
+    font-family: 'DM Serif Display', serif;
+    font-size: 28px;
+    color: var(--forest);
+    margin-bottom: 6px;
+  }
+  .auth-logo span { color: var(--amber); }
+  .auth-subtitle { font-size: 13px; color: var(--text-muted); margin-bottom: 32px; }
+  .auth-tabs { display: flex; gap: 0; margin-bottom: 24px; border: 1px solid var(--border-strong); border-radius: 8px; overflow: hidden; }
+  .auth-tab {
+    flex: 1; padding: 9px; text-align: center; font-size: 13px; font-weight: 500;
+    cursor: pointer; transition: all 0.2s; color: var(--text-muted); background: transparent; border: none;
+  }
+  .auth-tab.active { background: var(--forest); color: white; }
+  .auth-form { display: flex; flex-direction: column; gap: 14px; }
+  .auth-form input {
+    padding: 11px 14px; border: 1px solid var(--border-strong); border-radius: 8px;
+    font-size: 14px; font-family: 'DM Sans', sans-serif; background: white; color: var(--text);
+    outline: none; transition: border-color 0.2s;
+  }
+  .auth-form input:focus { border-color: var(--moss); }
+  .auth-form input::placeholder { color: #aab8b0; }
+  .btn-primary {
+    padding: 12px; background: var(--forest); color: white; border: none;
+    border-radius: 8px; font-size: 14px; font-weight: 500; cursor: pointer;
+    font-family: 'DM Sans', sans-serif; transition: background 0.2s; letter-spacing: 0.01em;
+  }
+  .btn-primary:hover { background: var(--forest-mid); }
+  .btn-primary:disabled { opacity: 0.6; cursor: not-allowed; }
+  .auth-msg { font-size: 13px; color: var(--red); text-align: center; min-height: 18px; }
+  .auth-success { color: var(--moss); }
 
-/* ── MOCKUP ── */
-.hero-mockup {
-  margin-top: 60px; position: relative; z-index: 1;
-  border-radius: var(--radius-lg); overflow: hidden;
-  box-shadow: 0 24px 80px rgba(26,46,34,0.18); border: 1px solid var(--border);
-  max-width: 900px; margin-left: auto; margin-right: auto;
-}
-.mockup-bar {
-  background: var(--forest); padding: 12px 20px;
-  display: flex; align-items: center; gap: 8px;
-}
-.mockup-dot { width: 10px; height: 10px; border-radius: 50%; }
-.mockup-title { margin-left: 8px; font-size: 12px; color: rgba(255,255,255,0.5); font-family: monospace; }
-.mockup-body {
-  background: var(--cream-dark); padding: 20px;
-  display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px;
-}
-.mockup-col { background: white; border-radius: 10px; overflow: hidden; }
-.mockup-col-head {
-  padding: 10px 14px; font-size: 10px; font-weight: 700;
-  letter-spacing: 0.08em; text-transform: uppercase;
-}
-.mcol-todo .mockup-col-head { background: #fff8f0; color: var(--amber); }
-.mcol-prog .mockup-col-head { background: #f0f6ff; color: #2563eb; }
-.mcol-done .mockup-col-head { background: #f0faf4; color: var(--moss); }
-.mockup-tasks { padding: 10px; display: flex; flex-direction: column; gap: 8px; }
-.mockup-task {
-  background: var(--cream); border-radius: 6px; padding: 10px 12px;
-  border: 1px solid rgba(26,46,34,0.06);
-}
-.mockup-task-title { font-size: 11px; font-weight: 500; color: var(--text); margin-bottom: 6px; }
-.mockup-tag {
-  display: inline-block; padding: 2px 6px; border-radius: 4px;
-  font-size: 9px; font-weight: 600;
-}
-.tag-high { background: rgba(192,57,43,0.1); color: #c0392b; }
-.tag-med { background: rgba(212,132,58,0.12); color: var(--amber); }
-.tag-low { background: rgba(78,140,98,0.12); color: var(--moss); }
-.mockup-dl { font-size: 9px; color: var(--text-muted); margin-top: 4px; }
+  /* ── SETUP SCREEN ── */
+  #setup-screen {
+    min-height: 100vh; background: var(--forest); display: flex;
+    align-items: center; justify-content: center;
+  }
+  .setup-card {
+    background: var(--cream); border-radius: var(--radius-lg);
+    padding: 44px; width: 460px; box-shadow: var(--shadow-lg);
+  }
+  .setup-card h2 { font-family: 'DM Serif Display', serif; font-size: 22px; margin-bottom: 6px; }
+  .setup-card p { font-size: 13px; color: var(--text-muted); margin-bottom: 28px; line-height: 1.6; }
+  .setup-form { display: flex; flex-direction: column; gap: 14px; }
+  .setup-form input {
+    padding: 11px 14px; border: 1px solid var(--border-strong); border-radius: 8px;
+    font-size: 14px; font-family: 'DM Sans', sans-serif; background: white; color: var(--text); outline: none;
+  }
+  .setup-form input:focus { border-color: var(--moss); }
+  .setup-hint { font-size: 12px; color: var(--text-muted); line-height: 1.6; padding: 10px 12px; background: var(--cream-dark); border-radius: 6px; }
+  .setup-hint a { color: var(--forest); }
+  .setup-skip { font-size: 12px; color: var(--text-muted); text-align: center; cursor: pointer; text-decoration: underline; }
 
-/* ── SECTIONS COMMON ── */
-section { padding: 96px 40px; }
-.section-label {
-  font-size: 11px; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase;
-  color: var(--moss); margin-bottom: 12px;
-}
-.section-title {
-  font-family: 'DM Serif Display', serif; font-size: clamp(28px, 4vw, 44px);
-  color: var(--forest); line-height: 1.2; margin-bottom: 16px;
-}
-.section-sub { font-size: 16px; color: var(--text-muted); line-height: 1.7; max-width: 500px; }
+  /* ── MAIN APP ── */
+  #app { display: none; flex-direction: column; min-height: 100vh; }
 
-/* ── FEATURES ── */
-#features { background: white; }
-.features-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 24px; margin-top: 56px; }
-.feature-card {
-  padding: 28px; border-radius: var(--radius-lg); border: 1px solid var(--border);
-  transition: all 0.2s; background: var(--cream);
-}
-.feature-card:hover { transform: translateY(-4px); box-shadow: 0 12px 40px rgba(26,46,34,0.1); border-color: rgba(78,140,98,0.3); }
-.feature-icon {
-  width: 48px; height: 48px; border-radius: 12px; display: flex;
-  align-items: center; justify-content: center; font-size: 22px;
-  margin-bottom: 18px;
-}
-.feature-title { font-size: 16px; font-weight: 600; color: var(--forest); margin-bottom: 8px; }
-.feature-desc { font-size: 14px; color: var(--text-muted); line-height: 1.7; }
+  /* ── TOPBAR ── */
+  .topbar {
+    background: var(--forest); color: white; padding: 0 28px;
+    display: flex; align-items: center; gap: 20px; height: 56px;
+    position: sticky; top: 0; z-index: 100;
+  }
+  .topbar-logo { font-family: 'DM Serif Display', serif; font-size: 20px; }
+  .topbar-logo span { color: var(--amber-light); }
+  .topbar-nav { display: flex; gap: 2px; margin-left: 24px; }
+  .nav-btn {
+    padding: 6px 14px; border-radius: 6px; font-size: 13px; font-weight: 500;
+    cursor: pointer; border: none; background: transparent; color: rgba(255,255,255,0.65);
+    font-family: 'DM Sans', sans-serif; transition: all 0.18s;
+  }
+  .nav-btn:hover { background: rgba(255,255,255,0.08); color: white; }
+  .nav-btn.active { background: rgba(255,255,255,0.14); color: white; }
+  .topbar-right { margin-left: auto; display: flex; align-items: center; gap: 12px; }
+  .user-chip {
+    display: flex; align-items: center; gap: 8px; font-size: 13px;
+    color: rgba(255,255,255,0.75);
+  }
+  .user-avatar {
+    width: 30px; height: 30px; border-radius: 50%; background: var(--moss);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 12px; font-weight: 600; color: white;
+  }
+  .btn-logout {
+    padding: 5px 12px; background: rgba(255,255,255,0.1); color: white;
+    border: 1px solid rgba(255,255,255,0.15); border-radius: 6px;
+    font-size: 12px; cursor: pointer; font-family: 'DM Sans', sans-serif;
+    transition: background 0.18s;
+  }
+  .btn-logout:hover { background: rgba(255,255,255,0.18); }
 
-/* ── HOW IT WORKS ── */
-#how { background: var(--cream); }
-.steps { display: grid; grid-template-columns: repeat(4, 1fr); gap: 20px; margin-top: 56px; position: relative; }
-.steps::before {
-  content: ''; position: absolute; top: 28px; left: 10%; right: 10%;
-  height: 1px; background: linear-gradient(90deg, transparent, var(--sage), transparent);
-}
-.step { text-align: center; position: relative; }
-.step-num {
-  width: 56px; height: 56px; border-radius: 50%; background: var(--forest);
-  color: white; font-family: 'DM Serif Display', serif; font-size: 22px;
-  display: flex; align-items: center; justify-content: center;
-  margin: 0 auto 16px; position: relative; z-index: 1;
-  box-shadow: 0 4px 16px rgba(26,46,34,0.25);
-}
-.step-title { font-size: 15px; font-weight: 600; color: var(--forest); margin-bottom: 6px; }
-.step-desc { font-size: 13px; color: var(--text-muted); line-height: 1.6; }
+  /* ── CONTENT ── */
+  .content { flex: 1; padding: 28px 28px 48px; }
 
-/* ── TESTIMONIALS ── */
-#testimonials { background: var(--forest); }
-#testimonials .section-label { color: var(--sage); }
-#testimonials .section-title { color: white; }
-.testi-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px; margin-top: 48px; }
-.testi-card {
-  background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.1);
-  border-radius: var(--radius-lg); padding: 28px;
-}
-.testi-stars { color: var(--amber-light); font-size: 14px; margin-bottom: 14px; letter-spacing: 2px; }
-.testi-text { font-size: 14px; color: rgba(255,255,255,0.8); line-height: 1.8; margin-bottom: 20px; font-style: italic; }
-.testi-author { display: flex; align-items: center; gap: 10px; }
-.testi-avatar {
-  width: 36px; height: 36px; border-radius: 50%; background: var(--moss);
-  display: flex; align-items: center; justify-content: center;
-  font-size: 14px; font-weight: 700; color: white; flex-shrink: 0;
-}
-.testi-name { font-size: 13px; font-weight: 600; color: white; }
-.testi-role { font-size: 12px; color: rgba(255,255,255,0.45); }
+  /* ── TOOLBAR ── */
+  .toolbar { display: flex; align-items: center; gap: 12px; margin-bottom: 24px; flex-wrap: wrap; }
+  .toolbar-title { font-family: 'DM Serif Display', serif; font-size: 22px; color: var(--forest); }
+  .toolbar-right { margin-left: auto; display: flex; gap: 10px; align-items: center; }
+  .btn-add {
+    display: flex; align-items: center; gap: 7px; padding: 9px 18px;
+    background: var(--forest); color: white; border: none; border-radius: 8px;
+    font-size: 13px; font-weight: 500; cursor: pointer; font-family: 'DM Sans', sans-serif;
+    transition: background 0.18s;
+  }
+  .btn-add:hover { background: var(--forest-mid); }
+  .filter-select {
+    padding: 8px 12px; border: 1px solid var(--border-strong); border-radius: 8px;
+    font-size: 13px; font-family: 'DM Sans', sans-serif; background: white;
+    color: var(--text); cursor: pointer; outline: none;
+  }
+  .search-input {
+    padding: 8px 14px; border: 1px solid var(--border-strong); border-radius: 8px;
+    font-size: 13px; font-family: 'DM Sans', sans-serif; background: white;
+    color: var(--text); outline: none; width: 200px;
+  }
+  .search-input:focus { border-color: var(--moss); }
 
-/* ── PRICING ── */
-#pricing { background: var(--cream); text-align: center; }
-#pricing .section-sub { margin: 0 auto; }
-.pricing-card {
-  max-width: 420px; margin: 48px auto 0; background: white;
-  border-radius: var(--radius-lg); border: 2px solid var(--forest);
-  padding: 40px; box-shadow: 0 20px 60px rgba(26,46,34,0.12);
-  position: relative; overflow: hidden;
-}
-.pricing-card::before {
-  content: ''; position: absolute; top: 0; left: 0; right: 0; height: 4px;
-  background: linear-gradient(90deg, var(--moss), var(--amber));
-}
-.pricing-badge {
-  display: inline-block; background: var(--amber); color: white;
-  padding: 4px 14px; border-radius: 20px; font-size: 11px;
-  font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; margin-bottom: 20px;
-}
-.pricing-price {
-  font-family: 'DM Serif Display', serif; font-size: 56px; color: var(--forest);
-  line-height: 1; margin-bottom: 6px;
-}
-.pricing-price span { font-size: 20px; vertical-align: top; margin-top: 10px; display: inline-block; }
-.pricing-period { font-size: 14px; color: var(--text-muted); margin-bottom: 28px; }
-.pricing-features { list-style: none; text-align: left; margin-bottom: 32px; display: flex; flex-direction: column; gap: 12px; }
-.pricing-features li { display: flex; align-items: center; gap: 10px; font-size: 14px; color: var(--text); }
-.pricing-features li::before { content: '✓'; color: var(--moss); font-weight: 700; flex-shrink: 0; }
-.btn-buy-big {
-  width: 100%; padding: 16px; background: var(--forest); color: white;
-  border: none; border-radius: var(--radius); font-size: 16px; font-weight: 600;
-  cursor: pointer; font-family: 'DM Sans', sans-serif; transition: all 0.2s;
-  box-shadow: 0 4px 16px rgba(26,46,34,0.25);
-}
-.btn-buy-big:hover { background: var(--forest-mid); transform: translateY(-2px); }
-.pricing-note { font-size: 12px; color: var(--text-muted); margin-top: 14px; }
+  /* ── KANBAN ── */
+  #kanban-view { display: none; }
+  .kanban-board { display: grid; grid-template-columns: repeat(3, 1fr); gap: 18px; align-items: start; }
+  .kanban-col {
+    border-radius: var(--radius-lg); overflow: hidden;
+    border: 1px solid var(--border);
+  }
+  .kanban-col-header {
+    padding: 14px 18px; display: flex; align-items: center; gap: 10px;
+    border-bottom: 1px solid var(--border);
+  }
+  .col-todo .kanban-col-header { background: var(--col-todo); }
+  .col-inprogress .kanban-col-header { background: var(--col-inprogress); }
+  .col-done .kanban-col-header { background: var(--col-done); }
+  .col-todo { background: var(--col-todo); }
+  .col-inprogress { background: var(--col-inprogress); }
+  .col-done { background: var(--col-done); }
+  .col-label { font-size: 12px; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; }
+  .col-todo .col-label { color: var(--amber); }
+  .col-inprogress .col-label { color: #2563eb; }
+  .col-done .col-label { color: var(--moss); }
+  .col-count {
+    display: inline-flex; align-items: center; justify-content: center;
+    min-width: 20px; height: 20px; border-radius: 10px;
+    font-size: 11px; font-weight: 600; padding: 0 6px;
+  }
+  .col-todo .col-count { background: rgba(212,132,58,0.15); color: var(--amber); }
+  .col-inprogress .col-count { background: rgba(37,99,235,0.12); color: #2563eb; }
+  .col-done .col-count { background: rgba(78,140,98,0.15); color: var(--moss); }
+  .kanban-cards { padding: 14px; display: flex; flex-direction: column; gap: 10px; min-height: 80px; }
+  .kanban-empty { text-align: center; padding: 24px 0; color: var(--text-muted); font-size: 13px; }
 
-/* ── PAYMENT MODAL ── */
-.modal-overlay {
-  display: none; position: fixed; inset: 0; background: rgba(10,20,14,0.6);
-  z-index: 1000; align-items: center; justify-content: center; padding: 20px;
-  backdrop-filter: blur(4px);
-}
-.modal-overlay.open { display: flex; }
-.payment-modal {
-  background: white; border-radius: var(--radius-lg); padding: 36px;
-  width: 100%; max-width: 440px;
-  max-height: 90vh; overflow-y: auto;
-  box-shadow: 0 24px 80px rgba(26,46,34,0.2);
-  animation: slideUp 0.3s ease;
-}
-@keyframes slideUp { from { opacity:0; transform:translateY(20px); } to { opacity:1; transform:translateY(0); } }
-.payment-title { font-family: 'DM Serif Display', serif; font-size: 22px; margin-bottom: 6px; }
-.payment-sub { font-size: 13px; color: var(--text-muted); margin-bottom: 24px; }
-.payment-steps { display: flex; flex-direction: column; gap: 16px; margin-bottom: 24px; }
-.payment-step { display: flex; gap: 14px; align-items: flex-start; }
-.pstep-num {
-  width: 28px; height: 28px; border-radius: 50%; background: var(--forest);
-  color: white; font-size: 12px; font-weight: 700; display: flex;
-  align-items: center; justify-content: center; flex-shrink: 0; margin-top: 2px;
-}
-.pstep-content { flex: 1; }
-.pstep-title { font-size: 14px; font-weight: 600; margin-bottom: 3px; }
-.pstep-desc { font-size: 12px; color: var(--text-muted); line-height: 1.6; }
-.bank-box {
-  background: var(--cream-dark); border-radius: 10px; padding: 16px;
-  font-size: 13px; line-height: 2; border: 1px dashed rgba(26,46,34,0.2);
-}
-.bank-box strong { color: var(--forest); }
-.bank-amount { font-size: 20px; font-weight: 700; color: var(--forest); }
-.tg-contact-box {
-  background: rgba(37,161,218,0.08); border-radius: 10px; padding: 14px;
-  font-size: 13px; color: var(--text); border: 1px solid rgba(37,161,218,0.2);
-}
-.modal-close-btn {
-  width: 100%; padding: 12px; background: var(--cream-dark); border: none;
-  border-radius: var(--radius); font-size: 14px; cursor: pointer;
-  font-family: 'DM Sans', sans-serif; color: var(--text-muted); margin-top: 16px;
-}
+  /* ── TASK CARD ── */
+  .task-card {
+    background: white; border-radius: var(--radius); border: 1px solid var(--border);
+    padding: 14px 16px; cursor: pointer; transition: box-shadow 0.18s, transform 0.1s;
+    position: relative;
+  }
+  .task-card:hover { box-shadow: var(--shadow); transform: translateY(-1px); }
+  .task-card-title { font-size: 14px; font-weight: 500; color: var(--text); margin-bottom: 8px; line-height: 1.4; }
+  .task-card-meta { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+  .priority-badge {
+    padding: 2px 8px; border-radius: 4px; font-size: 11px; font-weight: 600; letter-spacing: 0.04em;
+  }
+  .priority-high { background: rgba(192,57,43,0.1); color: var(--red); }
+  .priority-medium { background: rgba(212,132,58,0.12); color: var(--amber); }
+  .priority-low { background: rgba(78,140,98,0.12); color: var(--moss); }
+  .deadline-badge {
+    display: flex; align-items: center; gap: 4px;
+    font-size: 11px; color: var(--text-muted);
+  }
+  .deadline-badge.overdue { color: var(--red-light); }
+  .deadline-badge.soon { color: var(--amber); }
+  .task-card-actions {
+    position: absolute; top: 10px; right: 10px;
+    display: flex; gap: 4px; opacity: 0; transition: opacity 0.18s;
+  }
+  .task-card:hover .task-card-actions { opacity: 1; }
+  .action-btn {
+    width: 26px; height: 26px; border-radius: 6px; border: none;
+    display: flex; align-items: center; justify-content: center;
+    cursor: pointer; font-size: 14px; transition: background 0.15s;
+  }
+  .action-btn-edit { background: rgba(26,46,34,0.06); color: var(--text-muted); }
+  .action-btn-edit:hover { background: rgba(26,46,34,0.12); color: var(--text); }
+  .action-btn-del { background: rgba(192,57,43,0.06); color: var(--red); }
+  .action-btn-del:hover { background: rgba(192,57,43,0.14); }
 
-/* ── FAQ ── */
-#faq { background: white; }
-.faq-list { max-width: 680px; margin-top: 48px; display: flex; flex-direction: column; gap: 0; }
-.faq-item { border-bottom: 1px solid var(--border); }
-.faq-q {
-  padding: 20px 0; display: flex; align-items: center; justify-content: space-between;
-  cursor: pointer; font-size: 15px; font-weight: 500; color: var(--forest);
-  gap: 16px; user-select: none;
-}
-.faq-icon { font-size: 20px; color: var(--text-muted); flex-shrink: 0; transition: transform 0.2s; }
-.faq-a { font-size: 14px; color: var(--text-muted); line-height: 1.8; padding-bottom: 20px; display: none; }
-.faq-item.open .faq-a { display: block; }
-.faq-item.open .faq-icon { transform: rotate(45deg); }
+  /* ── CALENDAR VIEW ── */
+  #calendar-view { display: none; }
+  .calendar-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 18px; }
+  .cal-nav { display: flex; align-items: center; gap: 14px; }
+  .cal-nav-btn {
+    width: 34px; height: 34px; border-radius: 8px; border: 1px solid var(--border-strong);
+    background: white; cursor: pointer; font-size: 16px; color: var(--text);
+    display: flex; align-items: center; justify-content: center; transition: background 0.15s;
+  }
+  .cal-nav-btn:hover { background: var(--cream-dark); }
+  .cal-month-title { font-family: 'DM Serif Display', serif; font-size: 20px; }
+  .cal-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 2px; }
+  .cal-dow {
+    text-align: center; font-size: 11px; font-weight: 600; letter-spacing: 0.06em;
+    text-transform: uppercase; color: var(--text-muted); padding: 8px 0;
+  }
+  .cal-cell {
+    background: white; border-radius: 8px; min-height: 90px; padding: 8px;
+    border: 1px solid var(--border); position: relative; transition: border-color 0.15s;
+  }
+  .cal-cell:hover { border-color: var(--border-strong); }
+  .cal-cell.other-month { background: var(--bg); opacity: 0.5; }
+  .cal-cell.today { border-color: var(--moss); }
+  .cal-date {
+    font-size: 13px; font-weight: 500; color: var(--text-muted); margin-bottom: 4px;
+  }
+  .cal-cell.today .cal-date {
+    width: 22px; height: 22px; border-radius: 50%; background: var(--forest);
+    color: white; display: flex; align-items: center; justify-content: center; font-size: 12px;
+  }
+  .cal-task-dot {
+    font-size: 11px; padding: 2px 6px; border-radius: 4px; margin-bottom: 2px;
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+    cursor: pointer; font-weight: 500; line-height: 1.4;
+  }
+  .cal-task-dot.todo { background: rgba(212,132,58,0.14); color: var(--amber); }
+  .cal-task-dot.inprogress { background: rgba(37,99,235,0.1); color: #2563eb; }
+  .cal-task-dot.done { background: rgba(78,140,98,0.12); color: var(--moss); }
+  .cal-more { font-size: 10px; color: var(--text-muted); margin-top: 2px; }
 
-/* ── CTA BOTTOM ── */
-#cta-bottom {
-  background: var(--forest); text-align: center; padding: 96px 40px;
-  position: relative; overflow: hidden;
-}
-#cta-bottom::before {
-  content: ''; position: absolute; width: 500px; height: 500px;
-  border-radius: 50%; background: rgba(255,255,255,0.03);
-  top: -200px; right: -100px;
-}
-#cta-bottom .section-title { color: white; margin-bottom: 12px; }
-#cta-bottom .section-sub { color: rgba(255,255,255,0.6); margin: 0 auto 36px; }
+  /* ── LIST VIEW ── */
+  #list-view { display: none; }
+  .task-list { display: flex; flex-direction: column; gap: 8px; }
+  .task-list-item {
+    background: white; border-radius: var(--radius); border: 1px solid var(--border);
+    padding: 14px 18px; display: flex; align-items: center; gap: 16px;
+    transition: box-shadow 0.15s; cursor: pointer;
+  }
+  .task-list-item:hover { box-shadow: var(--shadow); }
+  .task-list-status { width: 9px; height: 9px; border-radius: 50%; flex-shrink: 0; }
+  .status-todo { background: var(--amber); }
+  .status-inprogress { background: #2563eb; }
+  .status-done { background: var(--moss); }
+  .task-list-title { flex: 1; font-size: 14px; font-weight: 500; }
+  .task-list-title.done-text { text-decoration: line-through; color: var(--text-muted); }
+  .task-list-meta { display: flex; align-items: center; gap: 10px; }
+  .task-list-actions { display: flex; gap: 6px; margin-left: auto; }
 
-/* ── FOOTER ── */
-footer {
-  background: var(--forest); border-top: 1px solid rgba(255,255,255,0.08);
-  padding: 28px 40px; display: flex; align-items: center; justify-content: space-between;
-}
-.footer-logo { font-family: 'DM Serif Display', serif; font-size: 18px; color: white; }
-.footer-logo span { color: var(--amber-light); }
-.footer-text { font-size: 12px; color: rgba(255,255,255,0.35); }
+  /* ── MODAL ── */
+  .modal-overlay {
+    display: none; position: fixed; inset: 0;
+    background: rgba(10,20,14,0.55); z-index: 1000;
+    align-items: center; justify-content: center;
+    backdrop-filter: blur(2px);
+  }
+  .modal-overlay.open { display: flex; }
+  .modal {
+    background: white; border-radius: var(--radius-lg); padding: 32px 36px;
+    width: 500px; max-width: 95vw; max-height: 90vh; overflow-y: auto;
+    box-shadow: var(--shadow-lg); position: relative;
+  }
+  .modal-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 24px; }
+  .modal-title { font-family: 'DM Serif Display', serif; font-size: 22px; }
+  .modal-close {
+    width: 32px; height: 32px; border-radius: 8px; border: none;
+    background: var(--cream-dark); color: var(--text-muted); cursor: pointer;
+    font-size: 18px; display: flex; align-items: center; justify-content: center;
+    transition: background 0.15s;
+  }
+  .modal-close:hover { background: var(--border-strong); }
+  .form-group { margin-bottom: 18px; }
+  .form-label { font-size: 12px; font-weight: 600; color: var(--text-muted); letter-spacing: 0.04em; margin-bottom: 6px; display: block; }
+  .form-input {
+    width: 100%; padding: 10px 14px; border: 1px solid var(--border-strong);
+    border-radius: 8px; font-size: 14px; font-family: 'DM Sans', sans-serif;
+    color: var(--text); outline: none; transition: border-color 0.18s;
+  }
+  .form-input:focus { border-color: var(--moss); }
+  .form-textarea {
+    width: 100%; padding: 10px 14px; border: 1px solid var(--border-strong);
+    border-radius: 8px; font-size: 14px; font-family: 'DM Sans', sans-serif;
+    color: var(--text); outline: none; resize: vertical; min-height: 80px;
+    transition: border-color 0.18s;
+  }
+  .form-textarea:focus { border-color: var(--moss); }
+  .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+  .modal-footer { display: flex; gap: 10px; justify-content: flex-end; margin-top: 24px; }
+  .btn-cancel {
+    padding: 10px 20px; background: white; border: 1px solid var(--border-strong);
+    border-radius: 8px; font-size: 13px; font-weight: 500; cursor: pointer;
+    font-family: 'DM Sans', sans-serif; color: var(--text-muted); transition: background 0.15s;
+  }
+  .btn-cancel:hover { background: var(--cream-dark); }
+  .btn-save {
+    padding: 10px 24px; background: var(--forest); color: white; border: none;
+    border-radius: 8px; font-size: 13px; font-weight: 500; cursor: pointer;
+    font-family: 'DM Sans', sans-serif; transition: background 0.18s;
+  }
+  .btn-save:hover { background: var(--forest-mid); }
 
-/* ── ANIMATIONS ── */
-.fade-up { opacity: 0; transform: translateY(24px); transition: opacity 0.6s ease, transform 0.6s ease; }
-.fade-up.visible { opacity: 1; transform: translateY(0); }
-.fade-up:nth-child(2) { transition-delay: 0.1s; }
-.fade-up:nth-child(3) { transition-delay: 0.2s; }
-.fade-up:nth-child(4) { transition-delay: 0.3s; }
+  /* ── STATS BAR ── */
+  .stats-bar { display: grid; grid-template-columns: repeat(4, 1fr); gap: 14px; margin-bottom: 24px; }
+  .stat-card {
+    background: white; border-radius: var(--radius); border: 1px solid var(--border);
+    padding: 16px 20px;
+  }
+  .stat-label { font-size: 11px; font-weight: 600; color: var(--text-muted); letter-spacing: 0.06em; text-transform: uppercase; margin-bottom: 6px; }
+  .stat-value { font-size: 28px; font-weight: 300; color: var(--forest); font-family: 'DM Serif Display', serif; }
+  .stat-sub { font-size: 12px; color: var(--text-muted); margin-top: 2px; }
 
-/* ── ZALO FLOAT ── */
-.zalo-float {
-  position: fixed; bottom: 24px; right: 24px; z-index: 999;
-  display: flex; align-items: center; gap: 8px;
-  background: #0068ff; color: white; text-decoration: none;
-  padding: 10px 18px 10px 12px; border-radius: 50px;
-  font-size: 13px; font-weight: 600; font-family: 'DM Sans', sans-serif;
-  box-shadow: 0 4px 20px rgba(0,104,255,0.4);
-  transition: all 0.2s; animation: zaloIn 0.5s ease 1s both;
-}
-.zalo-float:hover { transform: translateY(-3px); box-shadow: 0 8px 28px rgba(0,104,255,0.5); }
-@keyframes zaloIn { from { opacity:0; transform:translateY(20px); } to { opacity:1; transform:translateY(0); } }
+  /* ── TOAST ── */
+  .toast-container { position: fixed; bottom: 28px; right: 28px; display: flex; flex-direction: column; gap: 10px; z-index: 9999; }
+  .toast {
+    background: var(--forest); color: white; padding: 12px 20px;
+    border-radius: 10px; font-size: 13px; font-weight: 500;
+    box-shadow: var(--shadow-lg); opacity: 0; transform: translateY(8px);
+    transition: all 0.3s; max-width: 300px; line-height: 1.4;
+  }
+  .toast.show { opacity: 1; transform: translateY(0); }
+  .toast.error { background: var(--red); }
+  .toast.success { background: var(--moss); }
 
-/* ── RESPONSIVE ── */
-@media (max-width: 900px) {
-  .features-grid { grid-template-columns: repeat(2, 1fr); }
-  .steps { grid-template-columns: repeat(2, 1fr); }
-  .steps::before { display: none; }
-  .testi-grid { grid-template-columns: 1fr; }
-}
-@media (max-width: 600px) {
-  nav { padding: 12px 16px; }
-  .nav-links { display: none; }
-  section { padding: 64px 20px; }
-  .hero { padding: 100px 20px 60px; }
-  .hero-cta { flex-direction: column; align-items: center; }
-  .btn-primary-lg, .btn-secondary-lg { width: 100%; justify-content: center; }
-  .features-grid { grid-template-columns: 1fr; }
-  .steps { grid-template-columns: repeat(2, 1fr); }
-  .mockup-body { grid-template-columns: 1fr; }
-  footer { flex-direction: column; gap: 8px; text-align: center; }
-  .modal-overlay { align-items: flex-end; padding: 0; }
-  .payment-modal { border-radius: 20px 20px 0 0; padding: 24px 20px; max-height: 85vh; }
-}
+  /* ── ONBOARDING ── */
+  #setup-screen { min-height:100vh; background:var(--forest); display:flex; align-items:center; justify-content:center; padding:20px; }
+  .onboard-wrap { background:var(--cream); border-radius:var(--radius-lg); padding:40px 44px; width:100%; max-width:500px; box-shadow:var(--shadow-lg); position:relative; }
+  .onboard-steps { display:flex; gap:6px; justify-content:center; margin-bottom:28px; }
+  .onboard-step { width:8px; height:8px; border-radius:50%; background:var(--border-strong); transition:background 0.2s; }
+  .onboard-step.active { background:var(--forest); width:24px; border-radius:4px; }
+  .onboard-slide { animation:fadeIn 0.25s ease; }
+  @keyframes fadeIn { from{opacity:0;transform:translateY(6px)} to{opacity:1;transform:translateY(0)} }
+  .onboard-icon { font-size:40px; margin-bottom:12px; }
+  .onboard-title { font-family:'DM Serif Display',serif; font-size:24px; color:var(--forest); margin-bottom:10px; }
+  .onboard-desc { font-size:14px; color:var(--text-muted); line-height:1.7; margin-bottom:22px; }
+  .onboard-feature-list { display:flex; flex-direction:column; gap:10px; margin-bottom:24px; }
+  .onboard-feature { display:flex; align-items:flex-start; gap:10px; font-size:14px; color:var(--text); line-height:1.5; }
+  .onboard-feature-icon { font-size:16px; flex-shrink:0; margin-top:1px; }
+  .onboard-skip { font-size:12px; color:var(--text-muted); text-align:center; margin-top:14px; cursor:pointer; text-decoration:underline; }
+  .onboard-skip:hover { color:var(--text); }
+  .onboard-demo-box { background:var(--cream-dark); border-radius:10px; padding:16px; margin-bottom:22px; text-align:center; }
+  .onboard-demo-notif { background:white; border-radius:8px; padding:12px 16px; border:1px solid var(--border); text-align:left; box-shadow:var(--shadow); }
+
+  /* ── TELEGRAM GUIDE ── */
+  .tg-guide { display:flex; flex-direction:column; gap:0; margin-bottom:20px; }
+  .tg-step { display:flex; gap:14px; padding:14px 0; border-bottom:1px solid var(--border); }
+  .tg-step:last-child { border-bottom:none; }
+  .tg-step-num { width:26px; height:26px; border-radius:50%; background:var(--forest); color:white; font-size:12px; font-weight:700; display:flex; align-items:center; justify-content:center; flex-shrink:0; margin-top:2px; }
+  .tg-step-body { flex:1; }
+  .tg-step-title { font-size:14px; font-weight:500; color:var(--text); margin-bottom:4px; }
+  .tg-step-sub { font-size:12px; color:var(--text-muted); line-height:1.6; margin-bottom:8px; }
+  .tg-mockup-search { background:white; border-radius:8px; border:1px solid var(--border); overflow:hidden; }
+  .tg-mockup-bar { background:#f0f2f5; padding:8px 12px; font-size:12px; color:var(--text-muted); border-bottom:1px solid var(--border); }
+  .tg-mockup-result { display:flex; align-items:center; gap:10px; padding:10px 12px; }
+  .tg-mockup-avatar { width:32px; height:32px; border-radius:50%; background:rgba(37,161,218,0.15); display:flex; align-items:center; justify-content:center; font-size:16px; }
+  .tg-mockup-chat { display:flex; flex-direction:column; gap:8px; }
+  .tg-bubble { padding:8px 12px; border-radius:12px; font-size:12px; max-width:85%; line-height:1.5; }
+  .tg-bubble-out { background:var(--forest); color:white; align-self:flex-end; border-radius:12px 12px 2px 12px; }
+  .tg-bubble-in { background:#f0f2f5; color:var(--text); align-self:flex-start; border-radius:12px 12px 12px 2px; }
+  .guide-section { margin-bottom:18px; }
+  .guide-step-badge { display:inline-block; background:var(--forest); color:white; font-size:11px; font-weight:700; padding:3px 10px; border-radius:20px; margin-bottom:8px; letter-spacing:0.04em; }
+  .guide-code-box { background:var(--cream-dark); border-radius:8px; padding:10px 14px; font-family:monospace; font-size:15px; color:var(--forest); font-weight:600; margin-top:6px; letter-spacing:0.04em; }
+  .guide-example-box { margin-top:8px; }
+
+  /* ── SETUP SCREEN OLD (remove) ── */
+  .setup-card { display:none; }
+
+
+  #settings-view { display: none; }
+  .settings-card {
+    background: white; border-radius: var(--radius-lg); border: 1px solid var(--border);
+    padding: 28px 32px; max-width: 540px; margin-bottom: 18px;
+  }
+  .settings-card h3 { font-family: 'DM Serif Display', serif; font-size: 18px; margin-bottom: 18px; }
+  .settings-row { display: flex; align-items: center; justify-content: space-between; padding: 12px 0; border-bottom: 1px solid var(--border); }
+  .settings-row:last-child { border-bottom: none; }
+  .settings-row-label { font-size: 14px; font-weight: 500; }
+  .settings-row-sub { font-size: 12px; color: var(--text-muted); margin-top: 2px; }
+  .toggle {
+    width: 42px; height: 24px; background: var(--border-strong); border-radius: 12px;
+    position: relative; cursor: pointer; transition: background 0.2s; flex-shrink: 0;
+  }
+  .toggle.on { background: var(--moss); }
+  .toggle::after {
+    content: ''; position: absolute; width: 18px; height: 18px; border-radius: 50%;
+    background: white; top: 3px; left: 3px; transition: left 0.2s;
+  }
+  .toggle.on::after { left: 21px; }
+
+  /* ── NOTIFICATION CHANNELS ── */
+  .notif-channel-row {
+    display: flex; align-items: center; gap: 12px;
+    padding: 14px 0; border-bottom: 1px solid var(--border);
+  }
+  .notif-channel-row:last-child { border-bottom: none; }
+  .notif-channel-icon {
+    width: 36px; height: 36px; border-radius: 8px; flex-shrink: 0;
+    display: flex; align-items: center; justify-content: center; font-size: 16px;
+  }
+  .btn-channel {
+    padding: 7px 14px; border-radius: 7px; border: 1px solid var(--border-strong);
+    background: white; color: var(--text); font-size: 12px; font-weight: 500;
+    cursor: pointer; font-family: 'DM Sans', sans-serif; white-space: nowrap;
+    transition: all 0.15s; flex-shrink: 0;
+  }
+  .btn-channel:hover { background: var(--cream-dark); }
+  .btn-channel.active { background: var(--moss); color: white; border-color: var(--moss); }
+  .btn-channel.blocked { background: rgba(192,57,43,0.08); color: var(--red); border-color: rgba(192,57,43,0.2); cursor: default; }
+
+  /* ── TELEGRAM BADGE ── */
+  .tg-badge {
+    display: inline-flex; align-items: center; gap: 5px; padding: 3px 10px;
+    background: rgba(37, 161, 218, 0.1); color: #1a87b5; border-radius: 6px;
+    font-size: 12px; font-weight: 500;
+  }
+
+  /* ── FILTER PANEL ── */
+  .btn-filter {
+    display: flex; align-items: center; gap: 6px; padding: 8px 14px;
+    background: white; border: 1px solid var(--border-strong); border-radius: 8px;
+    font-size: 13px; font-weight: 500; cursor: pointer; font-family: 'DM Sans', sans-serif;
+    color: var(--text); transition: all 0.15s; position: relative;
+  }
+  .btn-filter:hover { background: var(--cream-dark); }
+  .btn-filter.active { background: var(--forest); color: white; border-color: var(--forest); }
+  .filter-badge {
+    background: var(--amber); color: white; border-radius: 10px;
+    font-size: 10px; font-weight: 700; padding: 1px 5px; min-width: 16px; text-align: center;
+  }
+  .filter-panel {
+    background: white; border: 1px solid var(--border); border-radius: var(--radius);
+    padding: 16px 20px; margin-bottom: 16px; box-shadow: var(--shadow);
+    transition: all 0.2s;
+  }
+  .filter-panel.hidden { display: none; }
+  .filter-panel-inner { display: flex; gap: 24px; flex-wrap: wrap; align-items: flex-start; }
+  .filter-group { display: flex; flex-direction: column; gap: 8px; }
+  .filter-group-label { font-size: 11px; font-weight: 700; color: var(--text-muted); letter-spacing: 0.06em; text-transform: uppercase; }
+  .filter-chips { display: flex; gap: 6px; flex-wrap: wrap; }
+  .filter-chip {
+    display: flex; align-items: center; gap: 5px; padding: 5px 10px;
+    border: 1px solid var(--border-strong); border-radius: 20px; font-size: 12px;
+    cursor: pointer; transition: all 0.15s; color: var(--text); background: var(--cream);
+    user-select: none;
+  }
+  .filter-chip:has(input:checked) { background: var(--forest); color: white; border-color: var(--forest); }
+  .filter-chip input { display: none; }
+  .btn-clear-filter {
+    padding: 6px 12px; background: none; border: 1px solid var(--border-strong);
+    border-radius: 6px; font-size: 12px; color: var(--text-muted); cursor: pointer;
+    font-family: 'DM Sans', sans-serif; align-self: flex-end; margin-left: auto;
+    transition: all 0.15s;
+  }
+  .btn-clear-filter:hover { background: var(--cream-dark); color: var(--red); border-color: var(--red); }
+
+  /* ── TAGS ── */
+  .tag-badge {
+    display: inline-flex; align-items: center; gap: 4px;
+    padding: 2px 8px; border-radius: 4px; font-size: 11px; font-weight: 600;
+    color: white; letter-spacing: 0.02em;
+  }
+  .tag-input-wrap { display: flex; gap: 8px; align-items: center; }
+  .tag-color-picker { display: flex; gap: 6px; align-items: center; flex-shrink: 0; }
+  .tag-color-dot {
+    width: 20px; height: 20px; border-radius: 50%; cursor: pointer;
+    border: 2px solid transparent; transition: all 0.15s; flex-shrink: 0;
+  }
+  .tag-color-dot.active { border-color: white; box-shadow: 0 0 0 2px var(--forest); transform: scale(1.15); }
+  .tag-color-dot:hover { transform: scale(1.1); }
+
+  /* ── DRAG & DROP ── */
+  .task-card[draggable="true"] { cursor: grab; }
+  .task-card[draggable="true"]:active { cursor: grabbing; }
+  .task-card.dragging { opacity: 0.4; transform: rotate(2deg) scale(0.98); box-shadow: none; }
+  .kanban-cards.drag-over { background: rgba(78,140,98,0.08); border-radius: 8px; outline: 2px dashed var(--sage); }
+  .drag-placeholder {
+    height: 60px; border-radius: var(--radius); border: 2px dashed var(--sage);
+    background: rgba(78,140,98,0.05); margin-bottom: 0;
+  }
+
+  .hidden { display: none !important; }
+
+  /* ══════════════════════════════════════
+     RESPONSIVE — MOBILE FIRST
+  ══════════════════════════════════════ */
+
+  /* Tablet */
+  @media (max-width: 900px) {
+    .kanban-board { grid-template-columns: 1fr; gap: 12px; }
+    .stats-bar { grid-template-columns: repeat(2, 1fr); gap: 10px; }
+    .settings-card { max-width: 100%; }
+  }
+
+  /* Mobile */
+  @media (max-width: 600px) {
+    /* Base */
+    body { font-size: 14px; }
+
+    /* Loading */
+    .loading-logo { font-size: 26px; }
+
+    /* Auth */
+    #auth-screen { padding: 16px; align-items: flex-start; padding-top: 60px; }
+    .auth-card { width: 100%; padding: 28px 20px; border-radius: 16px; }
+    .auth-logo { font-size: 24px; }
+
+    /* Onboarding */
+    .onboard-wrap { padding: 28px 20px; border-radius: 16px; }
+    .onboard-title { font-size: 20px; }
+    .onboard-icon { font-size: 32px; margin-bottom: 8px; }
+    .tg-guide { max-height: 45vh; overflow-y: auto; padding-right: 4px; }
+
+    /* Topbar */
+    .topbar { height: auto; padding: 10px 14px; flex-wrap: wrap; gap: 8px; }
+    .topbar-logo { font-size: 17px; }
+    .topbar-nav { gap: 0; overflow-x: auto; -webkit-overflow-scrolling: touch; scrollbar-width: none; width: 100%; order: 3; flex: 0 0 100%; margin: 0 -14px; padding: 0 14px; }
+    .topbar-nav::-webkit-scrollbar { display: none; }
+    .nav-btn { padding: 7px 12px; font-size: 12px; white-space: nowrap; }
+    .topbar-right { margin-left: auto; gap: 8px; }
+    #user-email-display { display: none; }
+    .btn-logout { padding: 4px 10px; font-size: 11px; }
+
+    /* Content */
+    .content { padding: 14px 14px 60px; }
+
+    /* Stats */
+    .stats-bar { grid-template-columns: repeat(2, 1fr); gap: 8px; margin-bottom: 16px; }
+    .stat-card { padding: 12px 14px; }
+    .stat-value { font-size: 22px; }
+    .stat-label { font-size: 10px; }
+    .stat-sub { font-size: 11px; }
+
+    /* Toolbar */
+    .toolbar { flex-direction: column; align-items: stretch; gap: 8px; margin-bottom: 16px; }
+    .toolbar-title { font-size: 18px; }
+    .toolbar-right { margin-left: 0; display: grid; grid-template-columns: 1fr auto; gap: 8px; }
+    .search-input { width: 100%; }
+    .filter-select { font-size: 12px; padding: 7px 10px; }
+    .btn-add { white-space: nowrap; padding: 8px 14px; font-size: 13px; }
+
+    /* Kanban */
+    .kanban-board { grid-template-columns: 1fr; gap: 10px; }
+    .kanban-col-header { padding: 12px 14px; }
+    .kanban-cards { padding: 10px; gap: 8px; }
+    .task-card { padding: 12px 14px; }
+    .task-card-title { font-size: 13px; }
+    .task-card-actions { opacity: 1; } /* Luôn hiện trên mobile */
+    .action-btn { width: 30px; height: 30px; font-size: 15px; }
+
+    /* List view */
+    .task-list-item { padding: 12px 14px; gap: 10px; flex-wrap: wrap; }
+    .task-list-meta { flex-wrap: wrap; gap: 6px; }
+
+    /* Calendar */
+    .cal-grid { gap: 1px; }
+    .cal-cell { min-height: 60px; padding: 4px; border-radius: 4px; }
+    .cal-date { font-size: 11px; }
+    .cal-task-dot { font-size: 9px; padding: 1px 4px; }
+    .cal-dow { font-size: 10px; padding: 6px 0; }
+    .cal-month-title { font-size: 17px; }
+
+    /* Modal */
+    .modal-overlay { align-items: flex-end; }
+    .modal {
+      width: 100%; max-width: 100%; border-radius: 20px 20px 0 0;
+      padding: 24px 20px; max-height: 92vh;
+    }
+    .modal-title { font-size: 18px; }
+    .form-row { grid-template-columns: 1fr; gap: 10px; }
+
+    /* Settings */
+    .settings-card { padding: 20px 16px; border-radius: 12px; }
+    .settings-card h3 { font-size: 16px; margin-bottom: 14px; }
+    .settings-row { padding: 10px 0; }
+    .settings-row-label { font-size: 13px; }
+    .notif-channel-row { gap: 10px; padding: 12px 0; }
+    .notif-channel-icon { width: 32px; height: 32px; font-size: 14px; }
+    .btn-channel { padding: 6px 12px; font-size: 11px; }
+
+    /* Toast */
+    .toast-container { bottom: 16px; right: 16px; left: 16px; }
+    .toast { max-width: 100%; text-align: center; }
+  }
+
+  /* Small phones (iPhone SE, Galaxy A) */
+  @media (max-width: 380px) {
+    .auth-card { padding: 24px 16px; }
+    .onboard-wrap { padding: 24px 16px; }
+    .stats-bar { grid-template-columns: repeat(2, 1fr); gap: 6px; }
+    .stat-value { font-size: 20px; }
+    .topbar-logo { font-size: 15px; }
+    .nav-btn { padding: 6px 10px; font-size: 11px; }
+  }
 </style>
 </head>
 <body>
 
-<!-- NAV -->
-<nav>
-  <a href="#" class="nav-logo">Task<span>Flow</span></a>
-  <div class="nav-links">
-    <a href="#features">Tính năng</a>
-    <a href="#how">Cách dùng</a>
-    <a href="#pricing">Giá</a>
-    <a href="#faq">FAQ</a>
-  </div>
-  <div class="nav-right">
-    <a href="https://app.taskflow.com.vn" class="btn-login">Đăng nhập</a>
-    <a href="#pricing" class="btn-buy-nav">Mua ngay · 150k</a>
-  </div>
-</nav>
-
-<!-- HERO -->
-<section class="hero">
-  <div class="hero-bg"></div>
-  <div class="hero-dots"></div>
-  <div>
-    <div class="hero-content">
-      <div class="hero-badge">✨ Mua 1 lần · Dùng mãi mãi</div>
-      <h1 class="hero-title">Quản lý công việc<br><em>thông minh hơn</em></h1>
-      <p class="hero-sub">Kanban board trực quan, nhắc deadline tự động qua Telegram, lịch công việc — tất cả trong một app gọn nhẹ, không subscription.</p>
-      <div class="hero-cta">
-        <a href="#pricing" class="btn-primary-lg">🚀 Dùng thử ngay · 150k</a>
-        <a href="#features" class="btn-secondary-lg">Xem tính năng →</a>
-      </div>
-      <p class="hero-note">✓ Không giới hạn task &nbsp;·&nbsp; ✓ Dùng mãi mãi &nbsp;·&nbsp; ✓ Mọi thiết bị</p>
-    </div>
-
-    <!-- App Mockup -->
-    <div class="hero-mockup">
-      <div class="mockup-bar">
-        <div class="mockup-dot" style="background:#ff5f57"></div>
-        <div class="mockup-dot" style="background:#febc2e"></div>
-        <div class="mockup-dot" style="background:#28c840"></div>
-        <div class="mockup-title">app.taskflow.com.vn</div>
-      </div>
-      <div class="mockup-body">
-        <div class="mockup-col mcol-todo">
-          <div class="mockup-col-head">📋 To Do · 3</div>
-          <div class="mockup-tasks">
-            <div class="mockup-task">
-              <div class="mockup-task-title">Viết báo cáo Q2</div>
-              <span class="mockup-tag tag-high">🔴 Cao</span>
-              <div class="mockup-dl">🗓 18/05 · 17:00</div>
-            </div>
-            <div class="mockup-task">
-              <div class="mockup-task-title">Gửi proposal cho khách</div>
-              <span class="mockup-tag tag-med">🟡 TB</span>
-              <div class="mockup-dl">🗓 19/05 · 09:00</div>
-            </div>
-            <div class="mockup-task">
-              <div class="mockup-task-title">Review design mới</div>
-              <span class="mockup-tag tag-low">🟢 Thấp</span>
-            </div>
-          </div>
-        </div>
-        <div class="mockup-col mcol-prog">
-          <div class="mockup-col-head">🔄 Đang làm · 2</div>
-          <div class="mockup-tasks">
-            <div class="mockup-task">
-              <div class="mockup-task-title">Xây dựng landing page</div>
-              <span class="mockup-tag tag-high">🔴 Cao</span>
-              <div class="mockup-dl">🗓 18/05 · 23:00</div>
-            </div>
-            <div class="mockup-task">
-              <div class="mockup-task-title">Họp team tuần này</div>
-              <span class="mockup-tag tag-med">🟡 TB</span>
-            </div>
-          </div>
-        </div>
-        <div class="mockup-col mcol-done">
-          <div class="mockup-col-head">✅ Done · 4</div>
-          <div class="mockup-tasks">
-            <div class="mockup-task" style="opacity:0.6">
-              <div class="mockup-task-title" style="text-decoration:line-through">Setup server</div>
-              <span class="mockup-tag tag-low">✓ Xong</span>
-            </div>
-            <div class="mockup-task" style="opacity:0.6">
-              <div class="mockup-task-title" style="text-decoration:line-through">Thiết kế logo</div>
-              <span class="mockup-tag tag-low">✓ Xong</span>
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
-  </div>
-</section>
-
-<!-- FEATURES -->
-<section id="features">
-  <div class="section-label">Tính năng</div>
-  <div style="display:flex;align-items:flex-end;justify-content:space-between;flex-wrap:wrap;gap:16px;">
-    <h2 class="section-title">Mọi thứ bạn cần<br>để làm việc hiệu quả</h2>
-    <p class="section-sub">Không cồng kềnh, không phức tạp — chỉ có những tính năng thật sự cần thiết.</p>
-  </div>
-  <div class="features-grid">
-    <div class="feature-card fade-up">
-      <div class="feature-icon" style="background:rgba(212,132,58,0.1);">📋</div>
-      <div class="feature-title">Kanban Board</div>
-      <div class="feature-desc">Kéo task qua 3 cột To Do → Đang làm → Xong. Nhìn một cái biết ngay mình đang làm gì, còn gì cần làm.</div>
-    </div>
-    <div class="feature-card fade-up">
-      <div class="feature-icon" style="background:rgba(37,161,218,0.1);">✈️</div>
-      <div class="feature-title">Telegram Notifications</div>
-      <div class="feature-desc">Nhắc trước 1 tiếng và 15 phút khi deadline sắp đến. Bot gửi thẳng vào điện thoại — kể cả khi không mở app.</div>
-    </div>
-    <div class="feature-card fade-up">
-      <div class="feature-icon" style="background:rgba(78,140,98,0.1);">📅</div>
-      <div class="feature-title">Lịch Công Việc</div>
-      <div class="feature-desc">Xem tất cả deadline theo tháng trên calendar. Nhìn ngay biết tuần này bận những ngày nào.</div>
-    </div>
-    <div class="feature-card fade-up">
-      <div class="feature-icon" style="background:rgba(192,57,43,0.1);">🔔</div>
-      <div class="feature-title">Đa Kênh Thông Báo</div>
-      <div class="feature-desc">Nhận thông báo qua Telegram, trình duyệt, hoặc email — tuỳ bạn chọn kênh nào tiện nhất.</div>
-    </div>
-    <div class="feature-card fade-up">
-      <div class="feature-icon" style="background:rgba(37,99,235,0.1);">☁️</div>
-      <div class="feature-title">Đồng Bộ Mọi Thiết Bị</div>
-      <div class="feature-desc">Dữ liệu lưu trên cloud — mở trên điện thoại, máy tính, hay tablet đều thấy đúng task của mình.</div>
-    </div>
-    <div class="feature-card fade-up">
-      <div class="feature-icon" style="background:rgba(26,46,34,0.08);">🔒</div>
-      <div class="feature-title">Dữ Liệu Riêng Tư</div>
-      <div class="feature-desc">Mỗi tài khoản chỉ thấy task của mình. Không ai có thể xem dữ liệu của người khác.</div>
-    </div>
-  </div>
-</section>
-
-<!-- HOW IT WORKS -->
-<section id="how">
-  <div class="section-label">Cách dùng</div>
-  <h2 class="section-title">Bắt đầu trong 2 phút</h2>
-  <div class="steps">
-    <div class="step fade-up">
-      <div class="step-num">1</div>
-      <div class="step-title">Đăng ký tài khoản</div>
-      <div class="step-desc">Mua và nhận link kích hoạt. Đăng ký bằng email trong 30 giây.</div>
-    </div>
-    <div class="step fade-up">
-      <div class="step-num">2</div>
-      <div class="step-title">Kết nối Telegram</div>
-      <div class="step-desc">App hướng dẫn từng bước — chỉ cần tìm bot và copy 1 dãy số.</div>
-    </div>
-    <div class="step fade-up">
-      <div class="step-num">3</div>
-      <div class="step-title">Thêm task đầu tiên</div>
-      <div class="step-desc">Tạo task, đặt deadline, chọn độ ưu tiên. Chưa đến 1 phút.</div>
-    </div>
-    <div class="step fade-up">
-      <div class="step-num">4</div>
-      <div class="step-title">Nhận thông báo tự động</div>
-      <div class="step-desc">App tự nhắc trước 1 tiếng và 15 phút. Không bao giờ bị quên deadline nữa.</div>
-    </div>
-  </div>
-</section>
-
-<!-- TESTIMONIALS -->
-<section id="testimonials">
-  <div class="section-label">Người dùng nói gì</div>
-  <h2 class="section-title">Được tin dùng bởi<br>hàng trăm người</h2>
-  <div class="testi-grid">
-    <div class="testi-card fade-up">
-      <div class="testi-stars">★★★★★</div>
-      <div class="testi-text">"Từ hồi dùng TaskFlow mình không bao giờ bị quên deadline nữa. Cái hay nhất là bot Telegram nhắc trước 15 phút — vừa đủ để chuẩn bị."</div>
-      <div class="testi-author">
-        <div class="testi-avatar">A</div>
-        <div>
-          <div class="testi-name">Anh Tuấn</div>
-          <div class="testi-role">Freelance Designer</div>
-        </div>
-      </div>
-    </div>
-    <div class="testi-card fade-up">
-      <div class="testi-stars">★★★★★</div>
-      <div class="testi-text">"Giao diện đẹp, dùng trên điện thoại rất mượt. 150k mà dùng mãi mãi thì quá hời so với các app subscription khác."</div>
-      <div class="testi-author">
-        <div class="testi-avatar">L</div>
-        <div>
-          <div class="testi-name">Linh Phương</div>
-          <div class="testi-role">Marketing Executive</div>
-        </div>
-      </div>
-    </div>
-    <div class="testi-card fade-up">
-      <div class="testi-stars">★★★★★</div>
-      <div class="testi-text">"Mình recommend cho cả team dùng. Ai cũng khen giao diện thân thiện, setup Telegram dễ hơn mình nghĩ nhiều."</div>
-      <div class="testi-author">
-        <div class="testi-avatar">M</div>
-        <div>
-          <div class="testi-name">Minh Khoa</div>
-          <div class="testi-role">Project Manager</div>
-        </div>
-      </div>
-    </div>
-  </div>
-</section>
-
-<!-- PRICING -->
-<section id="pricing">
-  <div style="text-align:center">
-    <div class="section-label">Giá</div>
-    <h2 class="section-title">Đơn giản. Minh bạch.</h2>
-    <p class="section-sub">Không subscription. Không phí ẩn. Trả một lần, dùng mãi mãi.</p>
-  </div>
-  <div class="pricing-card">
-    <div class="pricing-badge">⚡ Trọn đời</div>
-    <div class="pricing-price"><span>đ</span>150.000</div>
-    <div class="pricing-period">Trả một lần · Không gia hạn · Không subscription</div>
-    <ul class="pricing-features">
-      <li>Kanban board không giới hạn task</li>
-      <li>Lịch công việc theo deadline</li>
-      <li>Nhắc Telegram trước 1 tiếng & 15 phút</li>
-      <li>Thông báo trình duyệt & email</li>
-      <li>Đồng bộ mọi thiết bị</li>
-      <li>Dữ liệu riêng tư, bảo mật</li>
-      <li>Cập nhật tính năng mới miễn phí</li>
-      <li>Hỗ trợ qua Telegram</li>
-    </ul>
-    <button class="btn-buy-big" onclick="openPayment()">🚀 Mua ngay · 150.000đ</button>
-    <div class="pricing-note">Sau khi chuyển khoản, tài khoản được kích hoạt trong vòng 30 phút</div>
-  </div>
-</section>
-
-<!-- FAQ -->
-<section id="faq">
-  <div class="section-label">FAQ</div>
-  <h2 class="section-title">Câu hỏi thường gặp</h2>
-  <div class="faq-list">
-    <div class="faq-item">
-      <div class="faq-q" onclick="toggleFaq(this)">
-        Sau khi mua xong thì dùng như thế nào?
-        <span class="faq-icon">+</span>
-      </div>
-      <div class="faq-a">Sau khi chuyển khoản và nhắn tin xác nhận qua Telegram, mình sẽ gửi link kích hoạt trong vòng 30 phút. Bạn vào link đó, đăng ký tài khoản bằng email là dùng được ngay.</div>
-    </div>
-    <div class="faq-item">
-      <div class="faq-q" onclick="toggleFaq(this)">
-        Dữ liệu của tôi có an toàn không?
-        <span class="faq-icon">+</span>
-      </div>
-      <div class="faq-a">Hoàn toàn an toàn. Dữ liệu được lưu trên Supabase với Row Level Security — mỗi tài khoản chỉ thấy task của mình, không ai có thể xem chéo dữ liệu của người khác.</div>
-    </div>
-    <div class="faq-item">
-      <div class="faq-q" onclick="toggleFaq(this)">
-        Tôi không biết dùng Telegram, có sao không?
-        <span class="faq-icon">+</span>
-      </div>
-      <div class="faq-a">Không sao cả! App có hướng dẫn từng bước rất chi tiết kèm hình minh hoạ. Bạn cũng có thể bỏ qua Telegram và chỉ dùng thông báo trình duyệt hoặc email.</div>
-    </div>
-    <div class="faq-item">
-      <div class="faq-q" onclick="toggleFaq(this)">
-        Dùng được trên điện thoại không?
-        <span class="faq-icon">+</span>
-      </div>
-      <div class="faq-a">Được! App hoạt động tốt trên mọi thiết bị — điện thoại Android, iPhone, máy tính. Bạn có thể thêm vào màn hình chính để dùng như app thật.</div>
-    </div>
-    <div class="faq-item">
-      <div class="faq-q" onclick="toggleFaq(this)">
-        "Dùng mãi mãi" nghĩa là gì?
-        <span class="faq-icon">+</span>
-      </div>
-      <div class="faq-a">Nghĩa là bạn trả 150k một lần duy nhất, không có phí hàng tháng hay hàng năm. Khi có tính năng mới, bạn được cập nhật miễn phí.</div>
-    </div>
-    <div class="faq-item">
-      <div class="faq-q" onclick="toggleFaq(this)">
-        Tôi muốn hoàn tiền thì làm thế nào?
-        <span class="faq-icon">+</span>
-      </div>
-      <div class="faq-a">Nếu trong 7 ngày đầu bạn không hài lòng, nhắn tin qua Telegram, mình sẽ hoàn tiền 100% không hỏi lý do.</div>
-    </div>
-  </div>
-</section>
-
-<!-- CTA BOTTOM -->
-<section id="cta-bottom">
-  <div style="position:relative;z-index:1;text-align:center;">
-    <h2 class="section-title">Sẵn sàng làm việc<br>thông minh hơn?</h2>
-    <p class="section-sub">Chỉ 150.000đ — ít hơn 1 tháng cà phê — để không bao giờ quên deadline nữa.</p>
-    <button class="btn-primary-lg" onclick="openPayment()" style="margin:0 auto;">🚀 Mua ngay · 150.000đ</button>
-  </div>
-</section>
-
-<!-- FOOTER -->
-<footer>
-  <div class="footer-logo">Task<span>Flow</span></div>
-  <div style="display:flex;gap:16px;align-items:center;">
-    <a href="https://zalo.me/0984697879" style="font-size:12px;color:rgba(255,255,255,0.5);text-decoration:none;">💬 Zalo CSKH: 0984 697 879</a>
-    <span style="color:rgba(255,255,255,0.2);">·</span>
-    <a href="https://t.me/tasktracker01bot" style="font-size:12px;color:rgba(255,255,255,0.5);text-decoration:none;">✈️ Telegram</a>
-  </div>
-  <div class="footer-text">© 2026 TaskFlow · taskflow.com.vn</div>
-</footer>
-
-<!-- NÚT ZALO NỔI -->
-<a href="https://zalo.me/0984697879" target="_blank" class="zalo-float" title="Chat Zalo hỗ trợ">
-  <img src="https://page.widget.zalo.me/static/images/2.0/Logo.svg" alt="Zalo" width="28" height="28" onerror="this.outerHTML='💬'">
-  <span>Hỗ trợ</span>
-</a>
-
-<!-- PAYMENT MODAL -->
-<div class="modal-overlay" id="payment-modal" onclick="if(event.target===this)closePayment()">
-  <div class="payment-modal">
-    <div class="payment-title">🎉 Mua TaskFlow · 150.000đ</div>
-    <div class="payment-sub">Quét mã QR hoặc chuyển khoản thủ công — xong trong 1 phút</div>
-
-    <div class="payment-steps">
-
-      <!-- Bước 1: QR -->
-      <div class="payment-step">
-        <div class="pstep-num">1</div>
-        <div class="pstep-content" style="width:100%">
-          <div class="pstep-title">Quét mã QR để thanh toán</div>
-          <div style="display:flex;gap:16px;align-items:flex-start;margin-top:10px;flex-wrap:wrap;">
-            <!-- QR Code từ VietQR -->
-            <div style="flex-shrink:0;text-align:center;">
-              <img
-                id="vietqr-img"
-                src="https://img.vietqr.io/image/ACB-38692527-compact2.png?amount=150000&addInfo=TASKFLOW%20[email]&accountName=MAI%20HOANG%20KHANH%20LINH"
-                alt="QR Thanh toán TaskFlow"
-                style="width:180px;height:180px;border-radius:12px;border:2px solid var(--border);display:block;"
-                onerror="this.style.display='none';document.getElementById('qr-fallback').style.display='block'"
-              >
-              <div id="qr-fallback" style="display:none;width:180px;height:180px;border-radius:12px;border:2px dashed var(--border);align-items:center;justify-content:center;flex-direction:column;gap:6px;font-size:12px;color:var(--text-muted);">
-                <div style="font-size:28px;">📱</div>
-                Không load được QR
-              </div>
-              <div style="font-size:11px;color:var(--text-muted);margin-top:6px;">Dùng app ngân hàng quét</div>
-            </div>
-            <!-- Thông tin TK -->
-            <div class="bank-box" style="flex:1;min-width:180px;">
-              <div>Ngân hàng: <strong>ACB</strong></div>
-              <div>Số TK: <strong style="font-size:15px;letter-spacing:0.05em;">38692527</strong>
-                <button onclick="copyText('38692527', this)" style="background:none;border:1px solid var(--border);border-radius:4px;padding:2px 8px;font-size:10px;cursor:pointer;margin-left:6px;color:var(--text-muted);">Copy</button>
-              </div>
-              <div>Chủ TK: <strong>MAI HOÀNG KHÁNH LINH</strong></div>
-              <div>Số tiền: <strong class="bank-amount">150.000đ</strong></div>
-              <div style="margin-top:6px;">Nội dung: <strong id="transfer-content">TASKFLOW [email]</strong>
-                <button onclick="copyText('TASKFLOW [email]', this)" style="background:none;border:1px solid var(--border);border-radius:4px;padding:2px 8px;font-size:10px;cursor:pointer;margin-left:6px;color:var(--text-muted);">Copy</button>
-              </div>
-            </div>
-          </div>
-
-          <!-- Nhập email để tạo QR cá nhân hoá -->
-          <div style="margin-top:12px;">
-            <div style="font-size:12px;color:var(--text-muted);margin-bottom:6px;">Nhập email để tạo QR với nội dung chuyển khoản đúng:</div>
-            <div style="display:flex;gap:8px;">
-              <input type="email" id="payment-email" placeholder="email@gmail.com"
-                style="flex:1;padding:9px 12px;border:1px solid var(--border);border-radius:8px;font-size:13px;font-family:'DM Sans',sans-serif;outline:none;"
-                oninput="updateQR(this.value)">
-              <button onclick="updateQR(document.getElementById('payment-email').value)"
-                style="padding:9px 14px;background:var(--forest);color:white;border:none;border-radius:8px;font-size:12px;cursor:pointer;font-family:'DM Sans',sans-serif;white-space:nowrap;">
-                Tạo QR
-              </button>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <!-- Bước 2: Xác nhận Telegram -->
-      <div class="payment-step">
-        <div class="pstep-num">2</div>
-        <div class="pstep-content">
-          <div class="pstep-title">Nhắn tin xác nhận qua Telegram</div>
-          <div class="pstep-desc" style="margin-bottom:8px;">Gửi ảnh chụp màn hình chuyển khoản + email đăng ký đến:</div>
-          <div class="tg-contact-box">
-            ✈️ Telegram: <strong><a href="https://t.me/tasktracker01bot" style="color:#1a87b5;text-decoration:none;">@tasktracker01bot</a></strong><br>
-            💬 Zalo: <strong><a href="https://zalo.me/0984697879" style="color:#0068ff;text-decoration:none;">0984 697 879</a></strong><br>
-            ⏱ Kích hoạt trong vòng <strong>30 phút</strong>
-          </div>
-        </div>
-      </div>
-
-    </div>
-    <button class="modal-close-btn" onclick="closePayment()">Đóng</button>
+<!-- ═══════════════ LOADING SCREEN ═══════════════ -->
+<div id="loading-screen">
+  <div class="loading-logo">Task<span>Flow</span></div>
+  <div class="loading-version">v1.2.0</div>
+  <div class="loading-dots">
+    <div class="loading-dot"></div>
+    <div class="loading-dot"></div>
+    <div class="loading-dot"></div>
   </div>
 </div>
 
+<!-- ═══════════════ AUTH SCREEN ═══════════════ -->
+<div id="auth-screen">
+  <div class="auth-card">
+    <div class="auth-logo">Task<span>Flow</span></div>
+    <div class="auth-subtitle">Quản lý công việc thông minh · Nhận thông báo Telegram</div>
+    <div class="auth-tabs">
+      <button class="auth-tab active" id="tab-login" onclick="switchTab('login')">Đăng nhập</button>
+      <button class="auth-tab" id="tab-register" onclick="switchTab('register')">Đăng ký</button>
+    </div>
+    <div class="auth-form">
+      <input type="email" id="auth-email" placeholder="Email của bạn" autocomplete="email">
+      <input type="password" id="auth-pass" placeholder="Mật khẩu" autocomplete="current-password" onkeydown="if(event.key==='Enter')doAuth()">
+      <input type="password" id="auth-pass2" placeholder="Xác nhận mật khẩu" class="hidden" onkeydown="if(event.key==='Enter')doAuth()">
+      <button class="btn-primary" id="auth-btn" onclick="doAuth()">Đăng nhập</button>
+      <div id="forgot-link" style="text-align:center;margin-top:4px;">
+        <span onclick="showForgot()" style="font-size:13px;color:var(--text-muted);cursor:pointer;text-decoration:underline;">Quên mật khẩu?</span>
+      </div>
+      <div class="auth-msg" id="auth-msg"></div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════ SETUP SCREEN (ONBOARDING) ═══════════════ -->
+<div id="setup-screen" style="display:none;">
+  <div class="onboard-wrap">
+
+    <!-- Bước chỉ báo -->
+    <div class="onboard-steps">
+      <div class="onboard-step active" id="dot-0"></div>
+      <div class="onboard-step" id="dot-1"></div>
+      <div class="onboard-step" id="dot-2"></div>
+    </div>
+
+    <!-- ── SLIDE 0: Chào mừng ── -->
+    <div class="onboard-slide" id="slide-0">
+      <div class="onboard-icon">🎉</div>
+      <h2 class="onboard-title">Chào mừng đến TaskFlow!</h2>
+      <p class="onboard-desc">Quản lý công việc hàng ngày dễ dàng hơn. Mình sẽ hướng dẫn bạn cài đặt nhanh trong 1 phút.</p>
+      <div class="onboard-feature-list">
+        <div class="onboard-feature">
+          <span class="onboard-feature-icon">📋</span>
+          <span>Kanban board — kéo task qua các cột To Do, Đang làm, Xong</span>
+        </div>
+        <div class="onboard-feature">
+          <span class="onboard-feature-icon">📅</span>
+          <span>Lịch công việc — xem deadline theo tháng</span>
+        </div>
+        <div class="onboard-feature">
+          <span class="onboard-feature-icon">🔔</span>
+          <span>Nhắc nhở tự động qua trình duyệt, email &amp; Telegram</span>
+        </div>
+      </div>
+      <button class="btn-primary" onclick="goSlide(1)" style="margin-top:8px;">Bắt đầu →</button>
+      <div class="onboard-skip" onclick="skipSetup()">Bỏ qua, tự khám phá</div>
+    </div>
+
+    <!-- ── SLIDE 1: Browser push ── -->
+    <div class="onboard-slide" id="slide-1" style="display:none;">
+      <div class="onboard-icon">🔔</div>
+      <h2 class="onboard-title">Bật thông báo trình duyệt</h2>
+      <p class="onboard-desc">Khi có task mới hoặc deadline sắp đến, TaskFlow sẽ hiện popup ngay trên màn hình — kể cả khi bạn đang dùng app khác.</p>
+      <div class="onboard-demo-box">
+        <div class="onboard-demo-notif">
+          <div style="font-weight:600;font-size:13px;margin-bottom:3px;">📋 TaskFlow</div>
+          <div style="font-size:12px;color:var(--text-muted);">⏰ Deadline "Báo cáo tháng 5" còn 2 giờ nữa!</div>
+        </div>
+        <div style="font-size:11px;color:var(--text-muted);margin-top:8px;">↑ Trình duyệt sẽ hiện thông báo như thế này</div>
+      </div>
+      <button class="btn-primary" id="slide1-push-btn" onclick="slide1EnablePush()" style="margin-top:4px;">Cho phép thông báo</button>
+      <div class="onboard-skip" onclick="goSlide(2)">Bỏ qua bước này →</div>
+    </div>
+
+    <!-- ── SLIDE 2: Telegram ── -->
+    <div class="onboard-slide" id="slide-2" style="display:none;">
+      <div class="onboard-icon">✈️</div>
+      <h2 class="onboard-title">Kết nối Telegram <span style="font-size:14px;font-weight:400;color:var(--text-muted);">(tuỳ chọn)</span></h2>
+      <p class="onboard-desc">Nhận thông báo thẳng vào Telegram. Làm theo đúng 4 bước — bỏ sót bước nào là không nhận được thông báo nhé!</p>
+
+      <div class="tg-guide">
+
+        <div class="tg-step">
+          <div class="tg-step-num">1</div>
+          <div class="tg-step-body">
+            <div class="tg-step-title">Mở Telegram → tìm bot <code id="bot-username-display">@tasktracker01bot</code></div>
+            <div class="tg-step-sub">Gõ tên bot vào ô tìm kiếm, chọn kết quả hiện ra</div>
+          </div>
+        </div>
+
+        <div class="tg-step">
+          <div class="tg-step-num">2</div>
+          <div class="tg-step-body">
+            <div class="tg-step-title" style="color:var(--red);">⚠️ Nhấn <strong>Start</strong> trong bot — bắt buộc!</div>
+            <div class="tg-step-sub">Nếu không nhấn Start, bot sẽ không gửi được tin nhắn cho bạn. Đây là bước quan trọng nhất.</div>
+            <div style="background:#fff8f0;border:1px solid rgba(212,132,58,0.3);border-radius:8px;padding:10px 12px;margin-top:8px;font-size:12px;color:var(--amber);font-weight:500;">
+              👉 Mở bot → thấy nút "<strong>Start</strong>" màu xanh → nhấn vào đó
+            </div>
+          </div>
+        </div>
+
+        <div class="tg-step">
+          <div class="tg-step-num">3</div>
+          <div class="tg-step-body">
+            <div class="tg-step-title">Tìm <code>@userinfobot</code> → nhấn Start → copy số ID</div>
+            <div class="tg-step-sub">Bot sẽ trả lời ngay với dãy số ID của bạn</div>
+            <div class="tg-mockup-chat">
+              <div class="tg-bubble tg-bubble-out">/start</div>
+              <div class="tg-bubble tg-bubble-in">
+                Your info:<br>
+                Id: <span style="color:#1a87b5;font-weight:700;">123456789</span> ← Copy số này<br>
+                First: Tên bạn
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="tg-step">
+          <div class="tg-step-num">4</div>
+          <div class="tg-step-body">
+            <div class="tg-step-title">Dán dãy số vào đây</div>
+            <div class="tg-step-sub">Chỉ copy phần số, ví dụ: <code>123456789</code> — không phải @username</div>
+            <input type="text" id="setup-tg-id" class="form-input" placeholder="Dán Chat ID vào đây..." style="margin-top:10px;font-size:14px;" oninput="validateTgId(this)">
+            <div id="tg-id-hint" style="font-size:12px;margin-top:6px;min-height:16px;"></div>
+          </div>
+        </div>
+
+      </div>
+
+      <div style="display:flex;gap:10px;margin-top:4px;flex-wrap:wrap;">
+        <button class="btn-primary" id="btn-finish-setup" onclick="saveSetup()">Xong, bắt đầu dùng →</button>
+        <button class="btn-cancel" onclick="openTgGuide()">📖 Xem hướng dẫn chi tiết</button>
+      </div>
+      <div class="onboard-skip" onclick="skipSetup()">Bỏ qua Telegram, cài sau trong Cài đặt</div>
+      <div class="auth-msg" id="setup-msg"></div>
+    </div>
+
+  </div>
+</div>
+
+<!-- ═══════════════ TELEGRAM GUIDE MODAL ═══════════════ -->
+<div class="modal-overlay" id="tg-guide-modal">
+  <div class="modal" style="max-width:560px;">
+    <div class="modal-header">
+      <div class="modal-title">✈️ Hướng dẫn lấy Telegram Chat ID</div>
+      <button class="modal-close" onclick="document.getElementById('tg-guide-modal').classList.remove('open')">✕</button>
+    </div>
+    <div style="font-size:14px;line-height:1.8;color:var(--text);">
+
+      <div style="background:rgba(212,132,58,0.1);border-radius:10px;padding:14px 16px;margin-bottom:20px;font-size:13px;color:var(--amber);font-weight:500;line-height:1.6;">
+        ⚠️ Quan trọng: phải làm đủ 4 bước theo thứ tự, đặc biệt <strong>Bước 2</strong> — nếu bỏ qua sẽ không nhận được thông báo.
+      </div>
+
+      <div class="guide-section">
+        <div class="guide-step-badge">Bước 1 — Tìm bot TaskFlow</div>
+        <p>Mở Telegram → nhấn vào kính lúp 🔍 → gõ tên bot:</p>
+        <div class="guide-code-box">@tasktracker01bot</div>
+        <p style="margin-top:8px;">Chọn kết quả đầu tiên hiện ra (có biểu tượng 🤖)</p>
+      </div>
+
+      <div class="guide-section">
+        <div class="guide-step-badge" style="background:var(--red);">Bước 2 — Nhấn Start (bắt buộc!)</div>
+        <p>Khi vào trang bot, nhấn nút <strong>Start</strong> màu xanh ở dưới cùng màn hình.</p>
+        <div style="background:#fff0f0;border-radius:8px;padding:12px;margin-top:8px;font-size:13px;color:var(--red);line-height:1.6;">
+          ❌ Nếu không nhấn Start, bot không thể gửi tin nhắn cho bạn dù bạn đã điền đúng Chat ID.<br>
+          ✅ Sau khi nhấn Start, bot sẽ gửi tin nhắn chào — vậy là được rồi.
+        </div>
+      </div>
+
+      <div class="guide-section">
+        <div class="guide-step-badge">Bước 3 — Lấy Chat ID của bạn</div>
+        <p>Tìm bot <strong>@userinfobot</strong> → nhấn Start → bot trả lời ngay với thông tin của bạn:</p>
+        <div class="guide-example-box">
+          <div style="background:white;border-radius:8px;padding:12px;font-size:13px;border:1px solid var(--border);">
+            Your Telegram info:<br>
+            <strong>Id: <span style="color:#1a87b5;">987654321</span></strong> ← Copy dãy số này<br>
+            First: Tên bạn<br>
+            Username: @username
+          </div>
+        </div>
+        <p style="margin-top:8px;font-size:13px;color:var(--text-muted);">Chỉ copy phần số (987654321), không copy @username</p>
+      </div>
+
+      <div class="guide-section">
+        <div class="guide-step-badge">Bước 4 — Điền vào TaskFlow</div>
+        <p>Quay lại TaskFlow → <strong>Cài đặt → Telegram</strong> → bật toggle → dán số vào ô Chat ID → nhấn <strong>Lưu cài đặt</strong> → nhấn <strong>Gửi thông báo thử</strong> để kiểm tra.</p>
+      </div>
+
+    </div>
+    <div class="modal-footer">
+      <button class="btn-save" onclick="document.getElementById('tg-guide-modal').classList.remove('open')">Đã hiểu rồi ✓</button>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════ MAIN APP ═══════════════ -->
+<div id="app">
+  <!-- Topbar -->
+  <div class="topbar">
+    <div class="topbar-logo">Task<span>Flow</span> <span style="font-size:10px;opacity:0.4;font-family:'DM Sans',sans-serif;font-weight:400;letter-spacing:0.04em;">v1.2.0</span></div>
+    <div class="topbar-nav">
+      <button class="nav-btn active" id="nav-kanban" onclick="switchView('kanban')">Kanban</button>
+      <button class="nav-btn" id="nav-calendar" onclick="switchView('calendar')">Lịch</button>
+      <button class="nav-btn" id="nav-list" onclick="switchView('list')">Danh sách</button>
+      <button class="nav-btn" id="nav-settings" onclick="switchView('settings')">Cài đặt</button>
+    </div>
+    <div class="topbar-right">
+      <div class="user-chip">
+        <div class="user-avatar" id="user-avatar">?</div>
+        <span id="user-email-display"></span>
+      </div>
+      <button class="btn-logout" onclick="logout()">Đăng xuất</button>
+    </div>
+  </div>
+
+  <!-- Content -->
+  <div class="content">
+
+    <!-- Stats Bar -->
+    <div class="stats-bar" id="stats-bar">
+      <div class="stat-card">
+        <div class="stat-label">Tổng công việc</div>
+        <div class="stat-value" id="stat-total">0</div>
+        <div class="stat-sub">trong tháng này</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">Đang làm</div>
+        <div class="stat-value" id="stat-inprogress">0</div>
+        <div class="stat-sub">in progress</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">Hoàn thành</div>
+        <div class="stat-value" id="stat-done">0</div>
+        <div class="stat-sub">done ✓</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">Quá hạn</div>
+        <div class="stat-value" id="stat-overdue" style="color:var(--red)">0</div>
+        <div class="stat-sub">cần xử lý</div>
+      </div>
+    </div>
+
+    <!-- Toolbar -->
+    <div class="toolbar">
+      <div class="toolbar-title" id="view-title">Kanban Board</div>
+      <div class="toolbar-right">
+        <input type="text" class="search-input" id="search-input" placeholder="🔍 Tìm kiếm..." oninput="renderCurrentView()">
+        <button class="btn-filter" id="btn-filter" onclick="toggleFilterPanel()">⚙️ Lọc <span id="filter-badge" class="filter-badge hidden">0</span></button>
+        <button class="btn-add" onclick="openTaskModal()">＋ Thêm task</button>
+      </div>
+    </div>
+
+    <!-- Filter Panel -->
+    <div id="filter-panel" class="filter-panel hidden">
+      <div class="filter-panel-inner">
+        <div class="filter-group">
+          <div class="filter-group-label">Ưu tiên</div>
+          <div class="filter-chips">
+            <label class="filter-chip"><input type="checkbox" value="high" onchange="renderCurrentView()"> 🔴 Cao</label>
+            <label class="filter-chip"><input type="checkbox" value="medium" onchange="renderCurrentView()"> 🟡 TB</label>
+            <label class="filter-chip"><input type="checkbox" value="low" onchange="renderCurrentView()"> 🟢 Thấp</label>
+          </div>
+        </div>
+        <div class="filter-group">
+          <div class="filter-group-label">Tag</div>
+          <div class="filter-chips" id="filter-tag-chips">
+            <span style="font-size:12px;color:var(--text-muted);">Chưa có tag nào</span>
+          </div>
+        </div>
+        <div class="filter-group">
+          <div class="filter-group-label">Deadline</div>
+          <div class="filter-chips">
+            <label class="filter-chip"><input type="radio" name="deadline-filter" value="" onchange="renderCurrentView()" checked> Tất cả</label>
+            <label class="filter-chip"><input type="radio" name="deadline-filter" value="today" onchange="renderCurrentView()"> Hôm nay</label>
+            <label class="filter-chip"><input type="radio" name="deadline-filter" value="week" onchange="renderCurrentView()"> Tuần này</label>
+            <label class="filter-chip"><input type="radio" name="deadline-filter" value="overdue" onchange="renderCurrentView()"> Quá hạn</label>
+          </div>
+        </div>
+        <button class="btn-clear-filter" onclick="clearFilters()">✕ Xoá bộ lọc</button>
+      </div>
+    </div>
+
+    <!-- Kanban View -->
+    <div id="kanban-view">
+      <div class="kanban-board">
+        <div class="kanban-col col-todo">
+          <div class="kanban-col-header">
+            <span class="col-label">To Do</span>
+            <span class="col-count" id="count-todo">0</span>
+          </div>
+          <div class="kanban-cards" id="col-todo-cards"></div>
+        </div>
+        <div class="kanban-col col-inprogress">
+          <div class="kanban-col-header">
+            <span class="col-label">In Progress</span>
+            <span class="col-count" id="count-inprogress">0</span>
+          </div>
+          <div class="kanban-cards" id="col-inprogress-cards"></div>
+        </div>
+        <div class="kanban-col col-done">
+          <div class="kanban-col-header">
+            <span class="col-label">Done</span>
+            <span class="col-count" id="count-done">0</span>
+          </div>
+          <div class="kanban-cards" id="col-done-cards"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Calendar View -->
+    <div id="calendar-view">
+      <div class="calendar-header">
+        <div class="cal-nav">
+          <button class="cal-nav-btn" onclick="changeMonth(-1)">‹</button>
+          <div class="cal-month-title" id="cal-month-title"></div>
+          <button class="cal-nav-btn" onclick="changeMonth(1)">›</button>
+        </div>
+      </div>
+      <div class="cal-grid" id="cal-grid"></div>
+    </div>
+
+    <!-- List View -->
+    <div id="list-view">
+      <div class="task-list" id="task-list-container"></div>
+    </div>
+
+    <!-- Settings View -->
+    <div id="settings-view">
+
+      <!-- Kênh thông báo -->
+      <div class="settings-card">
+        <h3>🔔 Kênh thông báo</h3>
+        <p style="font-size:13px;color:var(--text-muted);margin-bottom:20px;line-height:1.6;">Bật kênh nào tiện nhất — không cần bật hết cũng được.</p>
+
+        <!-- Browser Push -->
+        <div class="notif-channel-row">
+          <div class="notif-channel-icon" style="background:rgba(37,99,235,0.1);color:#2563eb;">🖥️</div>
+          <div style="flex:1;">
+            <div class="settings-row-label">Trình duyệt &amp; điện thoại</div>
+            <div class="settings-row-sub" id="push-status-text">Popup ngay trên màn hình — không cần cài app gì thêm</div>
+          </div>
+          <button class="btn-channel" id="btn-push" onclick="setupBrowserPush()">Bật ngay</button>
+        </div>
+
+        <!-- Email -->
+        <div class="notif-channel-row">
+          <div class="notif-channel-icon" style="background:rgba(78,140,98,0.12);color:var(--moss);">✉️</div>
+          <div style="flex:1;">
+            <div class="settings-row-label">Email</div>
+            <div class="settings-row-sub">Gửi vào hòm thư <span id="settings-email-inline" style="font-weight:500;color:var(--text);"></span></div>
+          </div>
+          <div class="toggle on" id="toggle-email" onclick="toggleSetting('notify_email')"></div>
+        </div>
+
+        <!-- Telegram -->
+        <div class="notif-channel-row" style="flex-wrap:wrap;gap:0;">
+          <div style="display:flex;align-items:center;gap:12px;width:100%;padding-bottom:0;">
+            <div class="notif-channel-icon" style="background:rgba(37,161,218,0.1);color:#1a87b5;">✈️</div>
+            <div style="flex:1;">
+              <div class="settings-row-label">Telegram</div>
+              <div class="settings-row-sub">Nhận tin nhắn trực tiếp trên Telegram của bạn</div>
+            </div>
+            <div class="toggle" id="toggle-telegram" onclick="toggleTelegram()"></div>
+          </div>
+          <div id="telegram-setup-panel" style="display:none;width:100%;margin-top:12px;padding:14px;background:var(--cream-dark);border-radius:8px;">
+            <div style="font-size:12px;color:var(--text-muted);margin-bottom:10px;line-height:1.8;">
+              👉 Mở Telegram → Tìm <strong>@userinfobot</strong> → Gửi <code>/start</code> → Copy dãy số ID nhận được → Dán vào ô bên dưới.
+            </div>
+            <input type="text" class="form-input" id="settings-tg-id" placeholder="Dán Chat ID vào đây (VD: 123456789)" style="font-size:13px;">
+            <button class="btn-cancel" onclick="openTgGuide()" style="margin-top:10px;font-size:12px;">📖 Xem hướng dẫn từng bước chi tiết</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Loại thông báo -->
+      <div class="settings-card">
+        <h3>⚡ Gửi thông báo khi nào</h3>
+        <div class="settings-row">
+          <div>
+            <div class="settings-row-label">Tạo task mới</div>
+            <div class="settings-row-sub">Ngay khi bạn thêm một task</div>
+          </div>
+          <div class="toggle on" id="toggle-new" onclick="toggleSetting('notify_new')"></div>
+        </div>
+        <div class="settings-row">
+          <div>
+            <div class="settings-row-label">Chuyển trạng thái</div>
+            <div class="settings-row-sub">Khi task đổi từ To Do → In Progress → Done</div>
+          </div>
+          <div class="toggle on" id="toggle-status" onclick="toggleSetting('notify_status')"></div>
+        </div>
+        <div class="settings-row">
+          <div>
+            <div class="settings-row-label">Nhắc deadline hàng ngày</div>
+            <div class="settings-row-sub">8:00 sáng mỗi ngày nếu có task sắp đến hạn</div>
+          </div>
+          <div class="toggle on" id="toggle-deadline" onclick="toggleSetting('notify_deadline')"></div>
+        </div>
+        <div style="margin-top:20px;display:flex;gap:10px;flex-wrap:wrap;">
+          <button class="btn-save" onclick="saveSettings()">Lưu cài đặt</button>
+          <button class="btn-cancel" onclick="testAllNotifications()">🧪 Gửi thông báo thử</button>
+        </div>
+      </div>
+
+      <!-- Tài khoản -->
+      <div class="settings-card">
+        <h3>👤 Tài khoản</h3>
+        <div class="settings-row">
+          <div>
+            <div class="settings-row-label">Email đăng nhập</div>
+            <div class="settings-row-sub" id="settings-email-display"></div>
+          </div>
+        </div>
+        <div style="margin-top:18px;">
+          <button class="btn-cancel" onclick="logout()">Đăng xuất</button>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<!-- ═══════════════ TASK MODAL ═══════════════ -->
+<div class="modal-overlay" id="task-modal">
+  <div class="modal">
+    <div class="modal-header">
+      <div class="modal-title" id="modal-title">Thêm task mới</div>
+      <button class="modal-close" onclick="closeTaskModal()">✕</button>
+    </div>
+    <div class="form-group">
+      <label class="form-label">Tiêu đề *</label>
+      <input type="text" class="form-input" id="task-title" placeholder="Nhập tên task...">
+    </div>
+    <div class="form-group">
+      <label class="form-label">Mô tả</label>
+      <textarea class="form-textarea" id="task-desc" placeholder="Chi tiết công việc..."></textarea>
+    </div>
+    <div class="form-row">
+      <div class="form-group">
+        <label class="form-label">Trạng thái</label>
+        <select class="form-input" id="task-status">
+          <option value="todo">📋 To Do</option>
+          <option value="inprogress">🔄 In Progress</option>
+          <option value="done">✅ Done</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Ưu tiên</label>
+        <select class="form-input" id="task-priority">
+          <option value="medium">🟡 Trung bình</option>
+          <option value="high">🔴 Cao</option>
+          <option value="low">🟢 Thấp</option>
+        </select>
+      </div>
+    </div>
+    <div class="form-group">
+      <label class="form-label">Tag / Nhãn</label>
+      <div class="tag-input-wrap">
+        <div class="tag-color-picker" id="tag-color-picker">
+          <div class="tag-color-dot active" data-color="#4e8c62" style="background:#4e8c62" onclick="selectTagColor(this)"></div>
+          <div class="tag-color-dot" data-color="#2563eb" style="background:#2563eb" onclick="selectTagColor(this)"></div>
+          <div class="tag-color-dot" data-color="#d4843a" style="background:#d4843a" onclick="selectTagColor(this)"></div>
+          <div class="tag-color-dot" data-color="#c0392b" style="background:#c0392b" onclick="selectTagColor(this)"></div>
+          <div class="tag-color-dot" data-color="#8b5cf6" style="background:#8b5cf6" onclick="selectTagColor(this)"></div>
+          <div class="tag-color-dot" data-color="#1a87b5" style="background:#1a87b5" onclick="selectTagColor(this)"></div>
+          <div class="tag-color-dot" data-color="#1a2e22" style="background:#1a2e22" onclick="selectTagColor(this)"></div>
+        </div>
+        <input type="text" class="form-input" id="task-tag" placeholder="VD: Marketing, Dev, Cá nhân..." style="flex:1;">
+      </div>
+      <input type="hidden" id="task-tag-color" value="#4e8c62">
+    </div>
+    <div class="form-group">
+      <label class="form-label">Deadline</label>
+      <input type="datetime-local" class="form-input" id="task-deadline">
+    </div>
+    <div class="modal-footer">
+      <button class="btn-cancel" onclick="closeTaskModal()">Huỷ</button>
+      <button class="btn-save" id="modal-save-btn" onclick="saveTask()">Lưu task</button>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════ FORGOT PASSWORD MODAL ═══════════════ -->
+<div class="modal-overlay" id="forgot-modal">
+  <div class="modal" style="max-width:400px;">
+    <div class="modal-header">
+      <div class="modal-title">🔑 Quên mật khẩu</div>
+      <button class="modal-close" onclick="closeForgot()">✕</button>
+    </div>
+    <p style="font-size:14px;color:var(--text-muted);margin-bottom:20px;line-height:1.6;">Nhập email đăng ký của bạn. Mình sẽ gửi link đặt lại mật khẩu vào hòm thư.</p>
+    <div class="form-group">
+      <label class="form-label">Email</label>
+      <input type="email" class="form-input" id="forgot-email" placeholder="Email của bạn..." onkeydown="if(event.key==='Enter')sendReset()">
+    </div>
+    <div class="auth-msg" id="forgot-msg"></div>
+    <div class="modal-footer">
+      <button class="btn-cancel" onclick="closeForgot()">Huỷ</button>
+      <button class="btn-save" id="forgot-btn" onclick="sendReset()">Gửi link đặt lại</button>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════ RESET PASSWORD SCREEN ═══════════════ -->
+<div id="reset-screen" style="display:none;min-height:100vh;background:var(--forest);align-items:center;justify-content:center;">
+  <div class="auth-card">
+    <div class="auth-logo">Task<span>Flow</span></div>
+    <div class="auth-subtitle" style="margin-bottom:24px;">Đặt lại mật khẩu mới</div>
+    <div class="auth-form">
+      <input type="password" id="reset-pass" placeholder="Mật khẩu mới (ít nhất 6 ký tự)" autocomplete="new-password">
+      <input type="password" id="reset-pass2" placeholder="Xác nhận mật khẩu mới" onkeydown="if(event.key==='Enter')doReset()">
+      <button class="btn-primary" id="reset-btn" onclick="doReset()">Đặt lại mật khẩu</button>
+      <div class="auth-msg" id="reset-msg"></div>
+    </div>
+  </div>
+</div>
+
+<!-- Toast container -->
+<div class="toast-container" id="toast-container"></div>
+
 <script>
-// FAQ
-function toggleFaq(el) {
-  const item = el.parentElement;
-  const isOpen = item.classList.contains('open');
-  document.querySelectorAll('.faq-item').forEach(i => i.classList.remove('open'));
-  if (!isOpen) item.classList.add('open');
+// ════════════════════════════════════════════════════════
+//  ⚠️  CẤU HÌNH — Thay đổi 2 giá trị này trước khi dùng
+// ════════════════════════════════════════════════════════
+const SUPABASE_URL = 'https://aonajkvhxyaacpkpuhku.supabase.co';
+const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImFvbmFqa3ZoeHlhYWNwa3B1aGt1Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzkwNjc3NzgsImV4cCI6MjA5NDY0Mzc3OH0.FRhQs_2yik48FKvUyaKAZo5_DIjbIvUDLACbR539RZM';
+
+// Bot Telegram mặc định (có thể để trống nếu mỗi user tự nhập token)
+const DEFAULT_BOT_TOKEN = '8662657092:AAFVptvzL7-WPUYuq-cB6jjv1nsLHp0tFyE';
+// ════════════════════════════════════════════════════════
+
+const APP_VERSION = 'v1.2.0';
+let sb, currentUser, tasks = [], userSettings = {
+  telegram_chat_id: '',
+  bot_token: '',
+  notify_new: true,
+  notify_status: true,
+  notify_deadline: true,
+};
+let editingTaskId = null, currentView = 'kanban', calendarDate = new Date();
+
+// ── FORGOT PASSWORD ───────────────────────────────────
+function showForgot() {
+  document.getElementById('forgot-modal').classList.add('open');
+  document.getElementById('forgot-msg').textContent = '';
+  setTimeout(() => document.getElementById('forgot-email').focus(), 100);
+}
+function closeForgot() { document.getElementById('forgot-modal').classList.remove('open'); }
+async function sendReset() {
+  const email = document.getElementById('forgot-email').value.trim();
+  const msg = document.getElementById('forgot-msg');
+  const btn = document.getElementById('forgot-btn');
+  if (!email) { msg.textContent = 'Vui lòng nhập email'; return; }
+  btn.disabled = true; btn.textContent = '...'; msg.textContent = '';
+  try {
+    const { error } = await sb.auth.resetPasswordForEmail(email, {
+      redirectTo: window.location.origin + window.location.pathname
+    });
+    if (error) { msg.textContent = error.message; }
+    else {
+      msg.className = 'auth-msg auth-success';
+      msg.textContent = '✅ Đã gửi! Kiểm tra hòm thư và nhấn link trong email.';
+      btn.textContent = 'Đã gửi ✓';
+    }
+  } catch(e) { msg.textContent = 'Lỗi kết nối'; }
+  btn.disabled = false;
+  if (btn.textContent === '...') btn.textContent = 'Gửi link đặt lại';
+}
+function showResetScreen() {
+  hideLoading();
+  document.getElementById('auth-screen').style.display = 'none';
+  document.getElementById('setup-screen').style.display = 'none';
+  document.getElementById('app').style.display = 'none';
+  document.getElementById('reset-screen').style.display = 'flex';
+}
+async function doReset() {
+  const pass = document.getElementById('reset-pass').value;
+  const pass2 = document.getElementById('reset-pass2').value;
+  const msg = document.getElementById('reset-msg');
+  const btn = document.getElementById('reset-btn');
+  if (!pass || pass.length < 6) { msg.textContent = 'Mật khẩu phải có ít nhất 6 ký tự'; return; }
+  if (pass !== pass2) { msg.textContent = 'Mật khẩu xác nhận không khớp'; return; }
+  btn.disabled = true; btn.textContent = '...';
+  try {
+    const { error } = await sb.auth.updateUser({ password: pass });
+    if (error) { msg.textContent = error.message; }
+    else {
+      msg.className = 'auth-msg auth-success';
+      msg.textContent = '✅ Đổi mật khẩu thành công!';
+      setTimeout(async () => {
+        document.getElementById('reset-screen').style.display = 'none';
+        currentUser = (await sb.auth.getUser()).data.user;
+        await loadUserSettings();
+        showApp();
+      }, 1500);
+    }
+  } catch(e) { msg.textContent = 'Lỗi: ' + e.message; }
+  btn.disabled = false;
+  if (btn.textContent === '...') btn.textContent = 'Đặt lại mật khẩu';
 }
 
-// Payment modal
-function openPayment() {
-  document.getElementById('payment-modal').classList.add('open');
-  // Reset QR về mặc định
-  updateQR('');
+// ── INIT ──────────────────────────────────────────────
+function initApp() {
+  try {
+    const { createClient } = window.supabase;
+    sb = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
+      auth: {
+        persistSession: true,
+        autoRefreshToken: true,
+        detectSessionInUrl: true,
+      }
+    });
+    window._sb = sb;
+
+    // Ẩn tất cả màn hình
+    document.getElementById('auth-screen').style.display = 'none';
+    document.getElementById('setup-screen').style.display = 'none';
+    document.getElementById('app').style.display = 'none';
+
+    // Kiểm tra session hiện tại trực tiếp thay vì dùng onAuthStateChange
+    sb.auth.getSession().then(async ({ data: { session } }) => {
+      if (session?.user) {
+        currentUser = session.user;
+        await loadUserSettings();
+        hideLoading();
+        if (!userSettings.setup_done) {
+          showScreen('setup');
+        } else {
+          showApp();
+        }
+      } else {
+        hideLoading();
+        showScreen('auth');
+      }
+    }).catch(() => {
+      hideLoading();
+      showScreen('auth');
+    });
+
+    // Vẫn giữ onAuthStateChange để bắt login/logout events
+    sb.auth.onAuthStateChange(async (event, session) => {
+      if (event === 'PASSWORD_RECOVERY') {
+        showResetScreen();
+      } else if (event === 'SIGNED_OUT') {
+        currentUser = null;
+        tasks = [];
+        showScreen('auth');
+      }
+    });
+
+  } catch(e) {
+    hideLoading();
+    showScreen('auth');
+    showToast('⚠️ Lỗi khởi động: ' + e.message, 'error', 6000);
+  }
 }
-function closePayment() {
-  document.getElementById('payment-modal').classList.remove('open');
+
+// Đợi cả DOM lẫn Supabase SDK load xong
+if (document.readyState === 'loading') {
+  document.addEventListener('DOMContentLoaded', initApp);
+} else {
+  initApp();
 }
 
-// VietQR: cập nhật QR khi user nhập email
-function updateQR(email) {
-  const bankCode = 'ACB';
-  const accountNo = '38692527';
-  const amount = '150000';
-  const emailClean = email.trim();
-  const addInfo = encodeURIComponent('TASKFLOW ' + (emailClean || '[email]'));
-  const accountName = encodeURIComponent('MAI HOANG KHANH LINH');
-  const url = `https://img.vietqr.io/image/${bankCode}-${accountNo}-compact2.png?amount=${amount}&addInfo=${addInfo}&accountName=${accountName}`;
-
-  const img = document.getElementById('vietqr-img');
-  img.style.display = 'block';
-  document.getElementById('qr-fallback').style.display = 'none';
-  img.src = url;
-
-  // Cập nhật nội dung chuyển khoản hiển thị
-  const content = 'TASKFLOW ' + (emailClean || '[email]');
-  document.getElementById('transfer-content').textContent = content;
+function hideLoading() {
+  const ls = document.getElementById('loading-screen');
+  if (!ls || ls.classList.contains('fade-out')) return;
+  ls.classList.add('fade-out');
+  setTimeout(() => ls.style.display = 'none', 400);
 }
 
-// Copy to clipboard
-function copyText(text, btn) {
-  // Lấy text thật từ transfer-content nếu là nội dung CK
-  const realText = text === 'TASKFLOW [email]'
-    ? document.getElementById('transfer-content').textContent
-    : text;
-  navigator.clipboard.writeText(realText).then(() => {
-    const orig = btn.textContent;
-    btn.textContent = '✓';
-    btn.style.color = 'var(--moss)';
-    setTimeout(() => { btn.textContent = orig; btn.style.color = ''; }, 1500);
-  }).catch(() => {
-    // Fallback cho trình duyệt cũ
-    const el = document.createElement('textarea');
-    el.value = realText;
-    document.body.appendChild(el);
-    el.select();
-    document.execCommand('copy');
-    document.body.removeChild(el);
-    btn.textContent = '✓';
-    setTimeout(() => btn.textContent = 'Copy', 1500);
+function showScreen(screen) {
+  document.getElementById('auth-screen').style.display = screen === 'auth' ? 'flex' : 'none';
+  document.getElementById('setup-screen').style.display = screen === 'setup' ? 'flex' : 'none';
+  document.getElementById('app').style.display = screen === 'app' ? 'flex' : 'none';
+  document.getElementById('reset-screen').style.display = 'none';
+  if (screen === 'setup') goSlide(0);
+}
+
+async function showApp() {
+  showScreen('app');
+  const email = currentUser.email || '';
+  document.getElementById('user-email-display').textContent = email.split('@')[0];
+  document.getElementById('user-avatar').textContent = (email[0] || '?').toUpperCase();
+  document.getElementById('settings-email-display').textContent = email;
+  await loadTasks();
+  switchView('kanban');
+  scheduleDeadlineCheck();
+}
+
+// ── AUTH ──────────────────────────────────────────────
+let authMode = 'login';
+function switchTab(mode) {
+  authMode = mode;
+  document.getElementById('tab-login').classList.toggle('active', mode === 'login');
+  document.getElementById('tab-register').classList.toggle('active', mode === 'register');
+  document.getElementById('auth-pass2').classList.toggle('hidden', mode === 'login');
+  document.getElementById('auth-btn').textContent = mode === 'login' ? 'Đăng nhập' : 'Tạo tài khoản';
+  document.getElementById('forgot-link').style.display = mode === 'login' ? 'block' : 'none';
+  document.getElementById('auth-msg').textContent = '';
+}
+
+async function doAuth() {
+  const email = document.getElementById('auth-email').value.trim();
+  const pass = document.getElementById('auth-pass').value;
+  const pass2 = document.getElementById('auth-pass2').value;
+  const msg = document.getElementById('auth-msg');
+  const btn = document.getElementById('auth-btn');
+  if (!email || !pass) { msg.textContent = 'Vui lòng điền đầy đủ thông tin'; return; }
+  if (authMode === 'register' && pass !== pass2) { msg.textContent = 'Mật khẩu xác nhận không khớp'; return; }
+  btn.disabled = true;
+  btn.textContent = '...';
+  msg.textContent = '';
+  try {
+    let res;
+    if (authMode === 'login') {
+      res = await sb.auth.signInWithPassword({ email, password: pass });
+    } else {
+      res = await sb.auth.signUp({ email, password: pass });
+    }
+    if (res.error) {
+      msg.textContent = res.error.message;
+      btn.disabled = false;
+      btn.textContent = authMode === 'login' ? 'Đăng nhập' : 'Tạo tài khoản';
+      return;
+    }
+    // Xử lý thủ công — không chờ onAuthStateChange
+    if (authMode === 'register') {
+      msg.className = 'auth-msg auth-success';
+      msg.textContent = 'Đăng ký thành công!';
+      btn.disabled = false;
+      btn.textContent = 'Tạo tài khoản';
+    }
+    if (res.data?.session?.user) {
+      currentUser = res.data.session.user;
+      await loadUserSettings();
+      hideLoading();
+      if (!userSettings.setup_done) {
+        showScreen('setup');
+      } else {
+        showApp();
+      }
+    }
+  } catch(e) {
+    msg.textContent = 'Lỗi kết nối: ' + e.message;
+    btn.disabled = false;
+    btn.textContent = authMode === 'login' ? 'Đăng nhập' : 'Tạo tài khoản';
+  }
+}
+
+async function logout() {
+  await sb.auth.signOut();
+  tasks = [];
+}
+
+// ── SETUP / ONBOARDING ────────────────────────────────
+function goSlide(n) {
+  [0,1,2].forEach(i => {
+    document.getElementById('slide-'+i).style.display = i===n ? 'block' : 'none';
+    const dot = document.getElementById('dot-'+i);
+    dot.classList.toggle('active', i<=n);
   });
 }
 
-// Scroll animations
-const observer = new IntersectionObserver(entries => {
-  entries.forEach(e => { if (e.isIntersecting) e.target.classList.add('visible'); });
-}, { threshold: 0.1 });
-document.querySelectorAll('.fade-up').forEach(el => observer.observe(el));
+async function slide1EnablePush() {
+  const btn = document.getElementById('slide1-push-btn');
+  if (!('Notification' in window)) { goSlide(2); return; }
+  const perm = await Notification.requestPermission();
+  if (perm === 'granted') {
+    userSettings.notify_push = true;
+    btn.textContent = '✓ Đã bật thông báo!';
+    btn.style.background = 'var(--moss)';
+    setTimeout(() => goSlide(2), 900);
+  } else {
+    btn.textContent = 'Đã từ chối — tiếp tục →';
+    btn.onclick = () => goSlide(2);
+  }
+}
+
+function validateTgId(input) {
+  const val = input.value.trim();
+  const hint = document.getElementById('tg-id-hint');
+  if (!val) { hint.textContent = ''; return; }
+  if (/^\d{6,12}$/.test(val)) {
+    hint.innerHTML = '<span style="color:var(--moss)">✓ Trông đúng rồi!</span>';
+  } else if (val.startsWith('@')) {
+    hint.innerHTML = '<span style="color:var(--amber)">⚠️ Đây là username, cần dãy số — làm lại bước 2</span>';
+  } else if (!/^\d+$/.test(val)) {
+    hint.innerHTML = '<span style="color:var(--red)">Chat ID chỉ gồm chữ số, ví dụ: 123456789</span>';
+  } else {
+    hint.textContent = '';
+  }
+}
+
+async function saveSetup() {
+  const tgEl = document.getElementById('setup-tg-id');
+  const tgId = tgEl ? tgEl.value.trim() : '';
+  userSettings = {
+    ...userSettings,
+    telegram_chat_id: tgId,
+    notify_telegram: !!tgId,
+    notify_email: true,
+    notify_new: true,
+    notify_status: true,
+    notify_deadline: true,
+    setup_done: true,
+  };
+  if ('Notification' in window && Notification.permission === 'granted') {
+    userSettings.notify_push = true;
+  }
+  await saveUserSettings();
+  showApp();
+  if (tgId) showToast('✅ Đã kết nối Telegram!', 'success');
+}
+
+async function skipSetup() {
+  userSettings.setup_done = true;
+  await saveUserSettings();
+  showApp();
+}
+
+function openTgGuide() {
+  document.getElementById('tg-guide-modal').classList.add('open');
+}
+
+
+// ── SETTINGS ──────────────────────────────────────────
+async function loadUserSettings() {
+  try {
+    const { data, error } = await sb.from('user_settings').select('*').eq('user_id', currentUser.id).maybeSingle();
+    if (data) {
+      userSettings = { ...userSettings, ...data };
+      const tgId = data.telegram_chat_id || '';
+      const tgEl = document.getElementById('settings-tg-id');
+      if (tgEl) tgEl.value = tgId;
+      setToggle('toggle-new', data.notify_new !== false);
+      setToggle('toggle-status', data.notify_status !== false);
+      setToggle('toggle-deadline', data.notify_deadline !== false);
+      setToggle('toggle-email', data.notify_email !== false);
+      const tgOn = !!(tgId && data.notify_telegram);
+      setToggle('toggle-telegram', tgOn);
+      const panel = document.getElementById('telegram-setup-panel');
+      if (panel) panel.style.display = (tgOn || tgId) ? 'block' : 'none';
+    }
+    // Nếu chưa có row thì tạo mới
+    if (!data) {
+      await sb.from('user_settings').insert({ user_id: currentUser.id, setup_done: false });
+    }
+    const email = currentUser.email || '';
+    const emailInline = document.getElementById('settings-email-inline');
+    if (emailInline) emailInline.textContent = email;
+    const emailDisplay = document.getElementById('settings-email-display');
+    if (emailDisplay) emailDisplay.textContent = email;
+    updatePushButtonState();
+  } catch(e) {
+    // Bỏ qua lỗi, dùng default settings
+  }
+}
+
+async function saveUserSettings() {
+  try {
+    await sb.from('user_settings').upsert({
+      user_id: currentUser.id,
+      ...userSettings,
+      updated_at: new Date().toISOString()
+    });
+  } catch(e) {}
+}
+
+async function saveSettings() {
+  const tgEl = document.getElementById('settings-tg-id');
+  if (tgEl) userSettings.telegram_chat_id = tgEl.value.trim();
+  userSettings.notify_new = document.getElementById('toggle-new').classList.contains('on');
+  userSettings.notify_status = document.getElementById('toggle-status').classList.contains('on');
+  userSettings.notify_deadline = document.getElementById('toggle-deadline').classList.contains('on');
+  userSettings.notify_email = document.getElementById('toggle-email').classList.contains('on');
+  userSettings.notify_telegram = document.getElementById('toggle-telegram').classList.contains('on');
+  await saveUserSettings();
+  showToast('✅ Đã lưu cài đặt', 'success');
+}
+
+function toggleSetting(key) {
+  const idMap = { notify_new: 'toggle-new', notify_status: 'toggle-status', notify_deadline: 'toggle-deadline', notify_email: 'toggle-email', notify_telegram: 'toggle-telegram' };
+  const el = document.getElementById(idMap[key]);
+  if (el) el.classList.toggle('on');
+}
+
+function toggleTelegram() {
+  const el = document.getElementById('toggle-telegram');
+  el.classList.toggle('on');
+  const panel = document.getElementById('telegram-setup-panel');
+  panel.style.display = el.classList.contains('on') ? 'block' : 'none';
+  if (el.classList.contains('on')) setTimeout(() => document.getElementById('settings-tg-id').focus(), 100);
+}
+
+function setToggle(id, val) {
+  const el = document.getElementById(id);
+  if (!el) return;
+  if (val) el.classList.add('on'); else el.classList.remove('on');
+}
+
+// ── BROWSER PUSH ──────────────────────────────────────
+function updatePushButtonState() {
+  const btn = document.getElementById('btn-push');
+  const txt = document.getElementById('push-status-text');
+  if (!btn || !txt) return;
+  if (!('Notification' in window)) {
+    btn.textContent = 'Không hỗ trợ'; btn.className = 'btn-channel blocked'; return;
+  }
+  if (Notification.permission === 'granted') {
+    btn.textContent = '✓ Đã bật'; btn.className = 'btn-channel active';
+    txt.textContent = 'Đang hoạt động — bạn sẽ nhận popup ngay trên màn hình';
+    userSettings.notify_push = true;
+  } else if (Notification.permission === 'denied') {
+    btn.textContent = 'Đã bị chặn'; btn.className = 'btn-channel blocked';
+    txt.textContent = 'Bị chặn — vào Settings trình duyệt → Site permissions để bật lại';
+  } else {
+    btn.textContent = 'Bật ngay'; btn.className = 'btn-channel';
+    txt.textContent = 'Popup trực tiếp trên màn hình — không cần cài app gì thêm';
+  }
+}
+
+async function setupBrowserPush() {
+  if (!('Notification' in window)) { showToast('Trình duyệt không hỗ trợ thông báo', 'error'); return; }
+  if (Notification.permission === 'denied') { showToast('Bị chặn — vào Settings trình duyệt để bật lại', 'error'); return; }
+  const permission = await Notification.requestPermission();
+  updatePushButtonState();
+  if (permission === 'granted') {
+    userSettings.notify_push = true;
+    await saveUserSettings();
+    sendBrowserNotification('🎉 TaskFlow', 'Thông báo trình duyệt đã được bật!');
+    showToast('✅ Đã bật thông báo trình duyệt', 'success');
+  } else {
+    showToast('Bạn đã từ chối thông báo', 'error');
+  }
+}
+
+function sendBrowserNotification(title, body) {
+  if (!('Notification' in window) || Notification.permission !== 'granted') return;
+  try { new Notification(title, { body }); } catch(e) {}
+}
+
+// ── EMAIL NOTIFICATION ─────────────────────────────────
+async function sendEmailNotification(subject, body) {
+  if (!userSettings.notify_email) return;
+  // Nếu đã cài EmailJS: điền 3 biến bên dưới
+  const EJS_PUBLIC = '';   // emailjs public key
+  const EJS_SERVICE = '';  // service id
+  const EJS_TEMPLATE = ''; // template id
+  if (EJS_PUBLIC && EJS_SERVICE && EJS_TEMPLATE && window.emailjs) {
+    try {
+      await emailjs.send(EJS_SERVICE, EJS_TEMPLATE, { to_email: currentUser.email, subject, message: body });
+    } catch(e) {}
+  }
+}
+
+// ── TELEGRAM ──────────────────────────────────────────
+async function sendTelegramNotification(message) {
+  if (!userSettings.notify_telegram) return;
+  const chatId = userSettings.telegram_chat_id;
+  if (!chatId) return;
+  const token = userSettings.bot_token || DEFAULT_BOT_TOKEN;
+  if (!token) return;
+  try {
+    await fetch(`https://api.telegram.org/bot${token}/sendMessage`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ chat_id: chatId, text: message, parse_mode: 'Markdown' })
+    });
+  } catch(e) {}
+}
+
+// ── SEND ALL CHANNELS ─────────────────────────────────
+async function sendNotification(title, body, telegramMsg) {
+  if (userSettings.notify_push) sendBrowserNotification('TaskFlow — ' + title, body);
+  if (userSettings.notify_email) sendEmailNotification(title, body);
+  if (userSettings.notify_telegram) sendTelegramNotification(telegramMsg || `*${title}*\n${body}`);
+}
+
+async function testAllNotifications() {
+  await saveSettings();
+  const msg = 'Mọi kênh đang hoạt động bình thường 🎉';
+  sendBrowserNotification('🧪 TaskFlow — Test', msg);
+  sendEmailNotification('Test thông báo TaskFlow', msg);
+  sendTelegramNotification(`🧪 *Test thông báo TaskFlow*\n${msg}`);
+  showToast('📤 Đã gửi test — kiểm tra các kênh đã bật');
+}
+
+function scheduleDeadlineCheck() {
+  checkDeadlines();
+  setInterval(checkDeadlines, 60 * 1000);
+}
+
+// Lưu reminded vào localStorage để không bị reset giữa các lần check
+const _reminded = {
+  get h1() { try { return new Set(JSON.parse(localStorage.getItem('_tf_r_h1')||'[]')); } catch(e){ return new Set(); } },
+  get m15() { try { return new Set(JSON.parse(localStorage.getItem('_tf_r_m15')||'[]')); } catch(e){ return new Set(); } },
+  get overdue() { try { return new Set(JSON.parse(localStorage.getItem('_tf_r_od')||'[]')); } catch(e){ return new Set(); } },
+  addH1(id) { const s=this.h1; s.add(id); localStorage.setItem('_tf_r_h1', JSON.stringify([...s])); },
+  addM15(id) { const s=this.m15; s.add(id); localStorage.setItem('_tf_r_m15', JSON.stringify([...s])); },
+  addOverdue(id) { const s=this.overdue; s.add(id); localStorage.setItem('_tf_r_od', JSON.stringify([...s])); },
+  clear(id) {
+    ['_tf_r_h1','_tf_r_m15','_tf_r_od'].forEach(k => {
+      try { const s=new Set(JSON.parse(localStorage.getItem(k)||'[]')); s.delete(id); localStorage.setItem(k,JSON.stringify([...s])); } catch(e){}
+    });
+  }
+};
+
+function checkDeadlines() {
+  if (!userSettings.notify_deadline) return;
+  const now = new Date();
+
+  tasks.forEach(t => {
+    if (!t.deadline || t.status === 'done') return;
+    const dl = new Date(t.deadline);
+    const diff = dl - now;
+
+    // Quá hạn
+    if (diff < 0 && !_reminded.overdue.has(t.id)) {
+      _reminded.addOverdue(t.id);
+      sendNotification(
+        '🚨 Task quá hạn',
+        t.title,
+        `🚨 *Task quá hạn rồi!*\n📌 ${t.title}\nDeadline: ${formatDeadline(t.deadline)}`
+      );
+      return;
+    }
+
+    // Còn ~1 tiếng (55–65 phút)
+    if (diff >= 55*60*1000 && diff <= 65*60*1000 && !_reminded.h1.has(t.id)) {
+      _reminded.addH1(t.id);
+      sendNotification(
+        '⏰ Còn 1 tiếng',
+        `"${t.title}" đến hạn lúc ${formatDeadline(t.deadline)}`,
+        `⏰ *Còn 1 tiếng nữa đến deadline!*\n📌 ${t.title}\n🕐 ${formatDeadline(t.deadline)}`
+      );
+    }
+
+    // Còn ~15 phút (13–17 phút)
+    if (diff >= 13*60*1000 && diff <= 17*60*1000 && !_reminded.m15.has(t.id)) {
+      _reminded.addM15(t.id);
+      sendNotification(
+        '🔥 Còn 15 phút!',
+        `"${t.title}" sắp đến hạn!`,
+        `🔥 *Chỉ còn 15 phút!*\n📌 ${t.title}\n🕐 ${formatDeadline(t.deadline)}\n\nNhanh lên nào! 💪`
+      );
+    }
+  });
+}
+
+// ── TASKS ─────────────────────────────────────────────
+async function loadTasks() {
+  try {
+    const { data, error } = await sb.from('tasks').select('*').eq('user_id', currentUser.id).order('created_at', { ascending: false });
+    if (error) throw error;
+    tasks = data || [];
+    await autoDeleteDoneTasks();
+    updateStats();
+    renderCurrentView();
+  } catch(e) {
+    showToast('Lỗi tải dữ liệu: ' + e.message, 'error');
+  }
+}
+
+async function autoDeleteDoneTasks() {
+  const now = new Date();
+  const toDelete = tasks.filter(t => {
+    if (t.status !== 'done') return false;
+    const updatedAt = new Date(t.updated_at || t.created_at);
+    return (now - updatedAt) >= 24 * 60 * 60 * 1000; // 24 tiếng
+  });
+  if (toDelete.length === 0) return;
+  const ids = toDelete.map(t => t.id);
+  try {
+    await sb.from('tasks').delete().in('id', ids).eq('user_id', currentUser.id);
+    ids.forEach(id => _reminded.clear(id));
+    tasks = tasks.filter(t => !ids.includes(t.id));
+    showToast(`🗑 Đã tự xoá ${toDelete.length} task hoàn thành quá 24 giờ`);
+  } catch(e) {}
+}
+
+function getActiveFilters() {
+  const priorities = [...document.querySelectorAll('.filter-chips input[type=checkbox]:checked')].map(el => el.value);
+  const deadlineFilter = document.querySelector('input[name="deadline-filter"]:checked')?.value || '';
+  const tagFilters = [...document.querySelectorAll('.filter-chips input[type=checkbox][data-type="tag"]:checked')].map(el => el.value);
+  return { priorities, deadlineFilter, tagFilters };
+}
+
+function updateFilterBadge() {
+  const { priorities, deadlineFilter, tagFilters } = getActiveFilters();
+  const count = priorities.length + (deadlineFilter ? 1 : 0) + tagFilters.length;
+  const badge = document.getElementById('filter-badge');
+  const btn = document.getElementById('btn-filter');
+  if (count > 0) {
+    badge.textContent = count; badge.classList.remove('hidden');
+    btn.classList.add('active');
+  } else {
+    badge.classList.add('hidden');
+    btn.classList.remove('active');
+  }
+}
+
+function toggleFilterPanel() {
+  const panel = document.getElementById('filter-panel');
+  panel.classList.toggle('hidden');
+  updateTagFilterChips();
+}
+
+function updateTagFilterChips() {
+  const allTags = [...new Set(tasks.filter(t => t.tag).map(t => JSON.stringify({ name: t.tag, color: t.tag_color || '#4e8c62' })))].map(s => JSON.parse(s));
+  const container = document.getElementById('filter-tag-chips');
+  if (!container) return;
+  if (allTags.length === 0) {
+    container.innerHTML = '<span style="font-size:12px;color:var(--text-muted);">Chưa có tag nào</span>';
+    return;
+  }
+  container.innerHTML = allTags.map(t => `
+    <label class="filter-chip">
+      <input type="checkbox" value="${t.name}" data-type="tag" onchange="renderCurrentView()">
+      <span class="tag-badge" style="background:${t.color}">${t.name}</span>
+    </label>`).join('');
+}
+
+function clearFilters() {
+  document.querySelectorAll('.filter-chips input[type=checkbox]').forEach(el => el.checked = false);
+  const allRadio = document.querySelector('input[name="deadline-filter"][value=""]');
+  if (allRadio) allRadio.checked = true;
+  document.getElementById('search-input').value = '';
+  updateFilterBadge();
+  renderCurrentView();
+}
+
+function filteredTasks() {
+  const search = (document.getElementById('search-input')?.value || '').toLowerCase();
+  const { priorities, deadlineFilter, tagFilters } = getActiveFilters();
+  updateFilterBadge();
+  const now = new Date();
+  const startOfDay = new Date(now); startOfDay.setHours(0,0,0,0);
+  const endOfDay = new Date(now); endOfDay.setHours(23,59,59,999);
+  const endOfWeek = new Date(now); endOfWeek.setDate(now.getDate() + (7 - now.getDay()));
+
+  return tasks.filter(t => {
+    if (search && !t.title.toLowerCase().includes(search) && !(t.description||'').toLowerCase().includes(search) && !(t.tag||'').toLowerCase().includes(search)) return false;
+    if (priorities.length > 0 && !priorities.includes(t.priority)) return false;
+    if (tagFilters.length > 0 && !tagFilters.includes(t.tag)) return false;
+    if (deadlineFilter) {
+      const dl = t.deadline ? new Date(t.deadline) : null;
+      if (deadlineFilter === 'today' && (!dl || dl < startOfDay || dl > endOfDay)) return false;
+      if (deadlineFilter === 'week' && (!dl || dl < now || dl > endOfWeek)) return false;
+      if (deadlineFilter === 'overdue' && (!dl || dl >= now || t.status === 'done')) return false;
+    }
+    return true;
+  });
+}
+
+async function saveTask() {
+  const title = document.getElementById('task-title').value.trim();
+  if (!title) { showToast('Vui lòng nhập tiêu đề task', 'error'); return; }
+  const status_prev = editingTaskId ? tasks.find(t => t.id === editingTaskId)?.status : null;
+  // deadline-local → ISO string đúng timezone local (không convert sang UTC sai)
+  const dlRaw = document.getElementById('task-deadline').value;
+  const deadline = dlRaw ? new Date(dlRaw).toISOString() : null;
+  const payload = {
+    user_id: currentUser.id,
+    title,
+    description: document.getElementById('task-desc').value.trim(),
+    status: document.getElementById('task-status').value,
+    priority: document.getElementById('task-priority').value,
+    tag: document.getElementById('task-tag').value.trim() || null,
+    tag_color: document.getElementById('task-tag-color').value || '#4e8c62',
+    deadline,
+    updated_at: new Date().toISOString(),
+  };
+  try {
+    let savedTask;
+    if (editingTaskId) {
+      const { data } = await sb.from('tasks').update(payload).eq('id', editingTaskId).eq('user_id', currentUser.id).select().single();
+      savedTask = data;
+      tasks = tasks.map(t => t.id === editingTaskId ? { ...t, ...payload } : t);
+      if (userSettings.notify_status && status_prev && status_prev !== payload.status) {
+        const msg = `Task đổi trạng thái: ${statusLabel(status_prev)} → ${statusLabel(payload.status)}`;
+        sendNotification('🔄 ' + title, msg, `🔄 *Task cập nhật trạng thái*\n📌 ${title}\n${statusLabel(status_prev)} → ${statusLabel(payload.status)}`);
+        // Nếu done thì xoá khỏi danh sách nhắc
+        if (payload.status === 'done') {
+          _reminded.clear(editingTaskId);
+        }
+      }
+    } else {
+      payload.created_at = new Date().toISOString();
+      const { data } = await sb.from('tasks').insert(payload).select().single();
+      savedTask = data;
+      if (data) tasks.unshift(data);
+      if (userSettings.notify_new) {
+        const body = `${priorityLabel(payload.priority)} · ${statusLabel(payload.status)}${payload.deadline ? ' · Deadline: ' + formatDeadline(payload.deadline) : ''}`;
+        sendNotification('✨ Task mới: ' + title, body, `✨ *Task mới được tạo*\n📌 ${title}\n${body}`);
+      }
+    }
+    updateStats();
+    renderCurrentView();
+    closeTaskModal();
+    showToast(editingTaskId ? '✅ Đã cập nhật task' : '✅ Đã thêm task mới', 'success');
+  } catch(e) {
+    showToast('Lỗi lưu task: ' + e.message, 'error');
+  }
+}
+
+async function deleteTask(id) {
+  if (!confirm('Xoá task này?')) return;
+  try {
+    const t = tasks.find(x => x.id === id);
+    await sb.from('tasks').delete().eq('id', id).eq('user_id', currentUser.id);
+    _reminded.clear(id);
+    tasks = tasks.filter(x => x.id !== id);
+    updateStats();
+    renderCurrentView();
+    showToast('🗑 Đã xoá task');
+    if (t) sendTelegramNotification(`🗑 *Task đã bị xoá*\n📌 ${t.title}`);
+  } catch(e) {
+    showToast('Lỗi xoá task', 'error');
+  }
+}
+
+// ── MODAL ─────────────────────────────────────────────
+function openTaskModal(taskId) {
+  editingTaskId = taskId || null;
+  const modal = document.getElementById('task-modal');
+  if (taskId) {
+    const t = tasks.find(x => x.id === taskId);
+    document.getElementById('modal-title').textContent = 'Chỉnh sửa task';
+    document.getElementById('task-title').value = t.title || '';
+    document.getElementById('task-desc').value = t.description || '';
+    document.getElementById('task-status').value = t.status || 'todo';
+    document.getElementById('task-priority').value = t.priority || 'medium';
+    document.getElementById('task-tag').value = t.tag || '';
+    document.getElementById('task-tag-color').value = t.tag_color || '#4e8c62';
+    // Sync color picker
+    document.querySelectorAll('.tag-color-dot').forEach(dot => {
+      dot.classList.toggle('active', dot.dataset.color === (t.tag_color || '#4e8c62'));
+    });
+    document.getElementById('task-deadline').value = t.deadline ? toLocalDatetimeInput(t.deadline) : '';
+  } else {
+    document.getElementById('modal-title').textContent = 'Thêm task mới';
+    document.getElementById('task-title').value = '';
+    document.getElementById('task-desc').value = '';
+    document.getElementById('task-status').value = 'todo';
+    document.getElementById('task-priority').value = 'medium';
+    document.getElementById('task-deadline').value = '';
+  }
+  modal.classList.add('open');
+  setTimeout(() => document.getElementById('task-title').focus(), 100);
+}
+
+function closeTaskModal() {
+  document.getElementById('task-modal').classList.remove('open');
+  editingTaskId = null;
+}
+
+document.getElementById('task-modal').addEventListener('click', e => {
+  if (e.target === document.getElementById('task-modal')) closeTaskModal();
+});
+
+// ── VIEWS ─────────────────────────────────────────────
+function switchView(view) {
+  currentView = view;
+  ['kanban', 'calendar', 'list', 'settings'].forEach(v => {
+    document.getElementById(v + '-view').style.display = v === view ? 'block' : 'none';
+    document.getElementById('nav-' + v).classList.toggle('active', v === view);
+  });
+  const titles = { kanban: 'Kanban Board', calendar: 'Lịch Công Việc', list: 'Danh Sách', settings: 'Cài Đặt' };
+  document.getElementById('view-title').textContent = titles[view];
+  document.getElementById('stats-bar').style.display = view === 'settings' ? 'none' : '';
+  const toolbarRight = document.querySelector('.toolbar-right');
+  toolbarRight.style.display = view === 'settings' ? 'none' : 'flex';
+  renderCurrentView();
+}
+
+function renderCurrentView() {
+  if (currentView === 'kanban') renderKanban();
+  else if (currentView === 'calendar') renderCalendar();
+  else if (currentView === 'list') renderList();
+  else if (currentView === 'settings') loadUserSettings();
+}
+
+// ── KANBAN ─────────────────────────────────────────────
+function renderKanban() {
+  const ft = filteredTasks();
+  const groups = { todo: [], inprogress: [], done: [] };
+  ft.forEach(t => { if (groups[t.status]) groups[t.status].push(t); else groups.todo.push(t); });
+  ['todo', 'inprogress', 'done'].forEach(status => {
+    const el = document.getElementById('col-' + status + '-cards');
+    document.getElementById('count-' + status).textContent = groups[status].length;
+    if (groups[status].length === 0) {
+      el.innerHTML = '<div class="kanban-empty">Không có task nào</div>';
+    } else {
+      el.innerHTML = groups[status].map(t => taskCard(t)).join('');
+    }
+    // Drag & drop events cho mỗi cột
+    el.ondragover = e => { e.preventDefault(); el.classList.add('drag-over'); };
+    el.ondragleave = e => { if (!el.contains(e.relatedTarget)) el.classList.remove('drag-over'); };
+    el.ondrop = e => { e.preventDefault(); el.classList.remove('drag-over'); dropTask(status); };
+  });
+}
+
+// ── DRAG & DROP ───────────────────────────────────────
+let _dragId = null;
+
+function dragStart(e, id) {
+  _dragId = id;
+  e.dataTransfer.effectAllowed = 'move';
+  setTimeout(() => {
+    const el = document.querySelector(`.task-card[data-id="${id}"]`);
+    if (el) el.classList.add('dragging');
+  }, 0);
+}
+
+function dragEnd(e) {
+  document.querySelectorAll('.task-card').forEach(el => el.classList.remove('dragging'));
+  document.querySelectorAll('.kanban-cards').forEach(el => el.classList.remove('drag-over'));
+}
+
+async function dropTask(newStatus) {
+  if (!_dragId) return;
+  const task = tasks.find(t => t.id === _dragId);
+  if (!task || task.status === newStatus) { _dragId = null; return; }
+  const oldStatus = task.status;
+  // Update local
+  tasks = tasks.map(t => t.id === _dragId ? { ...t, status: newStatus, updated_at: new Date().toISOString() } : t);
+  renderKanban();
+  // Update Supabase
+  try {
+    await sb.from('tasks').update({ status: newStatus, updated_at: new Date().toISOString() }).eq('id', _dragId).eq('user_id', currentUser.id);
+    updateStats();
+    if (userSettings.notify_status) {
+      sendNotification('🔄 ' + task.title, `${statusLabel(oldStatus)} → ${statusLabel(newStatus)}`, `🔄 *Task chuyển trạng thái*\n📌 ${task.title}\n${statusLabel(oldStatus)} → ${statusLabel(newStatus)}`);
+    }
+    if (newStatus === 'done') _reminded.clear(_dragId);
+  } catch(e) {
+    showToast('Lỗi cập nhật task', 'error');
+    await loadTasks();
+  }
+  _dragId = null;
+}
+
+function taskCard(t) {
+  const dl = deadlineBadge(t.deadline, t.status);
+  const tagHtml = t.tag ? `<span class="tag-badge" style="background:${t.tag_color||'#4e8c62'}">${esc(t.tag)}</span>` : '';
+  return `<div class="task-card" draggable="true" data-id="${t.id}"
+    ondragstart="dragStart(event,'${t.id}')"
+    ondragend="dragEnd(event)"
+    onclick="openTaskModal('${t.id}')">
+    <div class="task-card-actions">
+      <button class="action-btn action-btn-edit" onclick="event.stopPropagation();openTaskModal('${t.id}')">✎</button>
+      <button class="action-btn action-btn-del" onclick="event.stopPropagation();deleteTask('${t.id}')">✕</button>
+    </div>
+    <div class="task-card-title">${esc(t.title)}</div>
+    <div class="task-card-meta">
+      <span class="priority-badge priority-${t.priority}">${priorityLabel(t.priority)}</span>
+      ${tagHtml}
+      ${dl}
+    </div>
+  </div>`;
+}
+
+// ── LIST ───────────────────────────────────────────────
+function renderList() {
+  const ft = filteredTasks();
+  const el = document.getElementById('task-list-container');
+  if (ft.length === 0) { el.innerHTML = '<div style="text-align:center;padding:48px;color:var(--text-muted)">Không có task nào</div>'; return; }
+  el.innerHTML = ft.map(t => `
+    <div class="task-list-item" onclick="openTaskModal('${t.id}')">
+      <div class="task-list-status status-${t.status}"></div>
+      <div class="task-list-title ${t.status === 'done' ? 'done-text' : ''}">${esc(t.title)}</div>
+      <div class="task-list-meta">
+        <span class="priority-badge priority-${t.priority}">${priorityLabel(t.priority)}</span>
+        ${t.deadline ? `<span style="font-size:12px;color:var(--text-muted)">🗓 ${formatDeadline(t.deadline)}</span>` : ''}
+        <span style="font-size:12px;color:var(--text-muted)">${statusLabel(t.status)}</span>
+      </div>
+      <div class="task-list-actions">
+        <button class="action-btn action-btn-edit" onclick="event.stopPropagation();openTaskModal('${t.id}')">✎</button>
+        <button class="action-btn action-btn-del" onclick="event.stopPropagation();deleteTask('${t.id}')">✕</button>
+      </div>
+    </div>`).join('');
+}
+
+// ── CALENDAR ───────────────────────────────────────────
+function renderCalendar() {
+  const year = calendarDate.getFullYear(), month = calendarDate.getMonth();
+  const months = ['Tháng 1','Tháng 2','Tháng 3','Tháng 4','Tháng 5','Tháng 6','Tháng 7','Tháng 8','Tháng 9','Tháng 10','Tháng 11','Tháng 12'];
+  document.getElementById('cal-month-title').textContent = `${months[month]} ${year}`;
+  const first = new Date(year, month, 1);
+  const last = new Date(year, month + 1, 0);
+  const startDay = (first.getDay() + 6) % 7;
+  const today = new Date(); today.setHours(0,0,0,0);
+  const tasksByDate = {};
+  tasks.forEach(t => {
+    if (!t.deadline) return;
+    const d = t.deadline.slice(0,10);
+    if (!tasksByDate[d]) tasksByDate[d] = [];
+    tasksByDate[d].push(t);
+  });
+  const days = ['T2','T3','T4','T5','T6','T7','CN'];
+  let html = days.map(d => `<div class="cal-dow">${d}</div>`).join('');
+  for (let i = 0; i < startDay; i++) html += `<div class="cal-cell other-month"></div>`;
+  for (let d = 1; d <= last.getDate(); d++) {
+    const dateObj = new Date(year, month, d);
+    const isToday = dateObj.getTime() === today.getTime();
+    const key = `${year}-${String(month+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
+    const dayTasks = tasksByDate[key] || [];
+    const showTasks = dayTasks.slice(0,3).map(t => `<div class="cal-task-dot ${t.status}" onclick="openTaskModal('${t.id}')" title="${esc(t.title)}">${esc(t.title)}</div>`).join('');
+    const more = dayTasks.length > 3 ? `<div class="cal-more">+${dayTasks.length-3} nữa</div>` : '';
+    html += `<div class="cal-cell ${isToday ? 'today' : ''}">
+      <div class="cal-date">${isToday ? `<span>${d}</span>` : d}</div>
+      ${showTasks}${more}
+    </div>`;
+  }
+  document.getElementById('cal-grid').innerHTML = html;
+}
+
+function changeMonth(dir) {
+  calendarDate = new Date(calendarDate.getFullYear(), calendarDate.getMonth() + dir, 1);
+  renderCalendar();
+}
+
+// ── STATS ──────────────────────────────────────────────
+function updateStats() {
+  const now = new Date();
+  document.getElementById('stat-total').textContent = tasks.length;
+  document.getElementById('stat-inprogress').textContent = tasks.filter(t => t.status === 'inprogress').length;
+  document.getElementById('stat-done').textContent = tasks.filter(t => t.status === 'done').length;
+  document.getElementById('stat-overdue').textContent = tasks.filter(t => t.deadline && new Date(t.deadline) < now && t.status !== 'done').length;
+}
+
+// ── HELPERS ───────────────────────────────────────────
+function selectTagColor(dot) {
+  document.querySelectorAll('.tag-color-dot').forEach(d => d.classList.remove('active'));
+  dot.classList.add('active');
+  document.getElementById('task-tag-color').value = dot.dataset.color;
+}
+
+function esc(s) { return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+
+// Convert UTC ISO string → "YYYY-MM-DDTHH:MM" theo giờ local (cho datetime-local input)
+function toLocalDatetimeInput(utcStr) {
+  if (!utcStr) return '';
+  const d = new Date(utcStr);
+  const pad = n => String(n).padStart(2,'0');
+  return `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+}
+
+function priorityLabel(p) {
+  return { high: '🔴 Cao', medium: '🟡 TB', low: '🟢 Thấp' }[p] || p;
+}
+
+function statusLabel(s) {
+  return { todo: '📋 To Do', inprogress: '🔄 In Progress', done: '✅ Done' }[s] || s;
+}
+
+function formatDeadline(dl) {
+  if (!dl) return '';
+  // Supabase trả về UTC string, parse đúng múi giờ Việt Nam (UTC+7)
+  const d = new Date(dl);
+  return d.toLocaleString('vi-VN', {
+    day: '2-digit', month: '2-digit', year: 'numeric',
+    hour: '2-digit', minute: '2-digit',
+    timeZone: 'Asia/Ho_Chi_Minh'
+  });
+}
+
+function deadlineBadge(dl, status) {
+  if (!dl || status === 'done') return '';
+  const now = new Date(), d = new Date(dl);
+  const diff = d - now;
+  const cls = diff < 0 ? 'overdue' : diff < 86400000 ? 'soon' : '';
+  const label = diff < 0 ? '⚠️ Quá hạn' : `🗓 ${formatDeadline(dl)}`;
+  return `<span class="deadline-badge ${cls}">${label}</span>`;
+}
+
+function showToast(msg, type = '', duration = 3500) {
+  const el = document.createElement('div');
+  el.className = `toast ${type}`;
+  el.textContent = msg;
+  document.getElementById('toast-container').appendChild(el);
+  requestAnimationFrame(() => { requestAnimationFrame(() => el.classList.add('show')); });
+  setTimeout(() => {
+    el.classList.remove('show');
+    setTimeout(() => el.remove(), 400);
+  }, duration);
+}
 </script>
 </body>
 </html>
